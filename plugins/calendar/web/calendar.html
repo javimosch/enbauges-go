@@ -228,6 +228,9 @@
                 </div>
                 
                 <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                  <button v-if="entry.type === 'template'" @click.stop="useTemplate(entry)" class="enbauges-btn-primary" style="padding: 0.375rem 0.75rem; font-size: 0.8125rem;">
+                    Utiliser
+                  </button>
                   <button v-if="entry.url" @click.stop="openUrl(entry.url)" class="enbauges-btn-secondary" style="padding: 0.375rem 0.75rem; font-size: 0.8125rem;">
                     Plus d'infos
                   </button>
@@ -395,6 +398,9 @@
               <path d="M8 2l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4l2-4z"/>
             </svg>
             {{ selectedEntry.votes || 0 }}
+          </button>
+          <button v-if="selectedEntry.type === 'template'" @click="useTemplate(selectedEntry); closeEntryDetail();" class="enbauges-btn-primary" style="padding: 0.5rem 1rem;">
+            📅 Utiliser ce modèle
           </button>
           <button @click="editEntry(selectedEntry); closeEntryDetail();" class="enbauges-btn-secondary" style="padding: 0.5rem 1rem;">
             Modifier
@@ -832,6 +838,28 @@
           }
         };
 
+        const useTemplate = (entry) => {
+          // Instantiate a concrete one-time event from a recurring template.
+          editingEntry.value = null;
+          form.value = {
+            type: 'event',
+            title: entry.title,
+            description: entry.description || '',
+            startDate: dayjs().format('YYYY-MM-DD'),
+            endDate: '',
+            frequency: 'one-time',
+            weekdays: [],
+            monthDays: [],
+            location: entry.location || '',
+            organizer: entry.organizer || '',
+            contact: entry.contact || '',
+            url: entry.url || ''
+          };
+          tagsInput.value = entry.tags ? entry.tags.join(', ') : '';
+          showAddModal.value = true;
+          showToast('Modèle appliqué — choisissez la date de l\'événement');
+        };
+
         const editEntry = (entry) => {
           editingEntry.value = entry;
           form.value = {
@@ -1020,6 +1048,7 @@
           hasVoted,
           toggleVote,
           editEntry,
+          useTemplate,
           deleteEntry,
           confirmDelete,
           toggleFormWeekday,
