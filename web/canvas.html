@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvas - Enbauges</title>
+  <meta name="description" content="La carte vivante des acteurs, solutions et initiatives du Cœur des Bauges">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css">
+  <link href="/css/enbauges.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue-router@4.5.0/dist/vue-router.global.prod.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+  <style>
+    [v-cloak] { display: none; }
+    @media (max-width: 767px) { .graph-mode-btn { display: none !important; } }
+    #cy { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="app" v-cloak>
+    <div v-if="toast.show" class="enbauges-toast" :class="'enbauges-toast--' + toast.type">
+      {{ toast.message }}
+    </div>
+
+    <!-- Full-screen graph mode overlay -->
+    <div v-if="showGraphMode" style="position: fixed; inset: 0; z-index: 900; background: #1C1917; display: flex; flex-direction: column;">
+      <div style="position: absolute; top: 1rem; left: 1rem; right: 1rem; z-index: 10; display: flex; justify-content: space-between; align-items: center; pointer-events: none;">
+        <div style="display: flex; gap: 0.5rem; pointer-events: auto; flex-wrap: wrap;">
+          <span style="display: flex; align-items: center; gap: 0.375rem; background: rgba(255,255,255,0.12); color: #FAF7F2; padding: 0.25rem 0.625rem; border-radius: 999px; font-size: 0.75rem; font-weight: 500;">
+            <span style="width: 9px; height: 9px; border-radius: 50%; background: #C2703A; display: inline-block; flex-shrink: 0;"></span> Acteurs
+          </span>
+          <span style="display: flex; align-items: center; gap: 0.375rem; background: rgba(255,255,255,0.12); color: #FAF7F2; padding: 0.25rem 0.625rem; border-radius: 999px; font-size: 0.75rem; font-weight: 500;">
+            <span style="width: 9px; height: 9px; border-radius: 50%; background: #7A9E7E; display: inline-block; flex-shrink: 0;"></span> Solutions
+          </span>
+          <span style="display: flex; align-items: center; gap: 0.375rem; background: rgba(255,255,255,0.12); color: #FAF7F2; padding: 0.25rem 0.625rem; border-radius: 999px; font-size: 0.75rem; font-weight: 500;">
+            <span style="width: 9px; height: 9px; border-radius: 50%; background: #D4A03C; display: inline-block; flex-shrink: 0;"></span> Initiatives
+          </span>
+          <span style="color: rgba(250,247,242,0.4); font-size: 0.7rem; align-self: center; padding-left: 0.25rem;">La taille des nœuds reflète le nombre de connexions</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; pointer-events: auto;">
+          <span v-if="graphLoading" style="color: rgba(250,247,242,0.6); font-size: 0.875rem;">Chargement du graphe...</span>
+          <button @click="closeGraphMode" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #FAF7F2; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;">✕ Fermer</button>
+        </div>
+      </div>
+      <div id="cy" style="flex: 1;"></div>
+    </div>
+
+    <nav class="enbauges-navbar">
+      <div class="enbauges-container">
+        <div class="navbar-content" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 0;">
+          <a href="/" class="enbauges-brand" style="text-decoration: none; cursor: pointer;">
+            <svg class="enbauges-brand__logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="16" cy="16" r="14" fill="#7A9E7E"/>
+              <path d="M16 8C12 8 8 12 8 16C8 20 12 24 16 24C20 24 24 20 24 16" stroke="#FAF7F2" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16 8C20 8 24 12 24 16C24 20 20 24 16 24" stroke="#D4A03C" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="16" cy="16" r="3" fill="#FAF7F2"/>
+            </svg>
+            <span style="font-weight: 700; font-size: 1.125rem; color: var(--enbauges-earth);">Enbauges</span>
+          </a>
+          <div style="display: flex; gap: 0.75rem;">
+            <button class="enbauges-btn-secondary graph-mode-btn" @click="openGraphMode" style="display: inline-flex; align-items: center; gap: 0.375rem;">
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="3" cy="3" r="2" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="12" cy="3" r="2" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="7.5" cy="12" r="2" stroke="currentColor" stroke-width="1.5"/>
+                <line x1="3" y1="5" x2="7.5" y2="10" stroke="currentColor" stroke-width="1.25"/>
+                <line x1="12" y1="5" x2="7.5" y2="10" stroke="currentColor" stroke-width="1.25"/>
+                <line x1="5" y1="3" x2="10" y2="3" stroke="currentColor" stroke-width="1.25"/>
+              </svg>
+              Graphe
+            </button>
+            <button class="enbauges-btn-primary" @click="showAddModal = true">
+              + Ajouter une carte
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <section class="enbauges-hero" style="background: white; border-bottom: 1px solid var(--enbauges-brown-light);">
+      <div class="enbauges-container" style="padding-top: 1rem; padding-bottom: 1rem;">
+        <button 
+          @click="toggleAbout"
+          style="display: flex; align-items: center; gap: 0.5rem; background: none; border: none; cursor: pointer; color: var(--enbauges-sage); font-weight: 500; font-size: 0.9375rem; width: 100%; text-align: left; padding: 0.5rem 0;"
+        >
+          <span>Comment ça marche ?</span>
+          <svg 
+            width="16" 
+            height="16" 
+            viewBox="0 0 16 16" 
+            fill="currentColor"
+            :style="{ transform: aboutFolded ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms ease' }"
+          >
+            <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        
+        <div v-show="!aboutFolded" style="padding-top: 0.5rem;">
+          <p style="font-size: 0.9375rem; color: var(--enbauges-brown); margin-bottom: 0.75rem; line-height: 1.6;">
+            EnBauges est la <strong>carte vivante du Cœur des Bauges</strong> : les acteurs, solutions et initiatives du territoire, rendus visibles et reliés entre eux.
+          </p>
+          <p style="font-size: 0.9375rem; color: var(--enbauges-brown); line-height: 1.6;">
+            Explorez, ajoutez des cartes et connectez-les entre elles pour révéler les liens qui font la force du territoire.
+          </p>
+
+          <div style="background: var(--enbauges-sage); color: white; border-radius: 0.75rem; padding: 0.875rem 1.125rem; margin-bottom: 1rem;">
+            <div style="font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9375rem;">Une carte, c'est simple :</div>
+            <div style="font-size: 0.875rem;">Un nom, quelques mots pour dire ce que c'est — le reste est optionnel.</div>
+          </div>
+
+          <div style="background: var(--enbauges-cream); border-radius: 0.75rem; padding: 0.875rem 1.125rem; margin-bottom: 1rem;">
+            <div style="font-size: 0.875rem; color: var(--enbauges-earth); font-weight: 500;">
+              Tout le monde peut contribuer.
+            </div>
+            <div style="font-size: 0.875rem; color: var(--enbauges-sage); font-weight: 500;">
+              Aucune inscription n'est nécessaire.
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+            <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--enbauges-terracotta); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="white">
+                  <circle cx="10" cy="6" r="4"/>
+                  <path d="M2 18c0-4 4-6 8-6s8 2 8 6"/>
+                </svg>
+              </div>
+              <div>
+                <div style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.125rem;">Acteurs</div>
+                <div style="font-size: 0.8125rem; color: var(--enbauges-brown);">Personnes, associations, collectivites</div>
+              </div>
+            </div>
+            
+            <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--enbauges-sage); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="white">
+                  <path d="M10 2l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6l2-6z"/>
+                </svg>
+              </div>
+              <div>
+                <div style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.125rem;">Solutions</div>
+                <div style="font-size: 0.8125rem; color: var(--enbauges-brown);">Outils, methodes, pratiques</div>
+              </div>
+            </div>
+            
+            <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--enbauges-amber); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="var(--enbauges-earth)">
+                  <path d="M10 2l8 4v6c0 4-4 7-8 8-4-1-8-4-8-8V6l8-4z"/>
+                </svg>
+              </div>
+              <div>
+                <div style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.125rem;">Initiatives</div>
+                <div style="font-size: 0.8125rem; color: var(--enbauges-brown);">Projets emergent de la communaute</div>
+              </div>
+            </div>
+          </div>
+          
+          <div style="background: var(--enbauges-cream); border-radius: 0.75rem; padding: 1rem 1.25rem; margin-bottom: 1rem;">
+            <div style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.5rem; font-size: 0.9375rem;">Comment contribuer ?</div>
+            <ol style="margin: 0; padding-left: 1.25rem; font-size: 0.875rem; color: var(--enbauges-brown); line-height: 1.7;">
+              <li>Cliquez sur <strong>+ Ajouter une carte</strong> pour déclarer un acteur, solution ou initiative</li>
+              <li>Décrivez-la <strong>en quelques mots</strong>, comme vous le diriez à un voisin</li>
+              <li>Votez pour les cartes qui vous semblent utiles</li>
+              <li>Connectez les cartes entre elles pour créer du lien</li>
+            </ol>
+          </div>
+          
+          <div style="background: var(--enbauges-cream); border-radius: 0.75rem; padding: 1rem 1.25rem;">
+            <div style="font-size: 0.875rem; color: var(--enbauges-brown); line-height: 1.7;">
+              Tout ce qui vit sur le territoire a sa place : associations, artisans, producteurs, services, projets, idées.
+            </div>
+            <div style="font-size: 0.8125rem; color: var(--enbauges-sage); line-height: 1.6; margin-top: 0.75rem; font-style: italic;">
+              La valeur d'une carte vient de sa clarté et des liens qu'elle crée avec les autres — la communauté vote et corrige.
+            </div>
+            <div style="font-size: 0.8125rem; color: var(--enbauges-brown); line-height: 1.6; margin-top: 0.75rem;">
+              <strong>Services :</strong> Vous pouvez aussi ajouter des services (foodtruck, artisan...) comme acteurs. <a href="/annuaire" style="color: var(--enbauges-sage);">Voir l'annuaire</a> du territoire.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <main class="enbauges-main">
+      <div class="enbauges-container" style="padding-top: 2rem; padding-bottom: 2rem;">
+        <div class="enbauges-filter-bar">
+          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between;">
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;">
+              <button 
+                class="enbauges-filter-toggle enbauges-filter-toggle--actor"
+                :class="{ 'enbauges-filter-toggle--active': filterType === 'all' && !showMyCards }"
+                @click="filterType = 'all'; showMyCards = false;"
+              >
+                Tous
+              </button>
+              <button 
+                class="enbauges-filter-toggle enbauges-filter-toggle--actor"
+                :class="{ 'enbauges-filter-toggle--active': filterType === 'actor' && !showMyCards }"
+                @click="filterType = 'actor'; showMyCards = false;"
+              >
+                Acteurs
+              </button>
+              <button 
+                class="enbauges-filter-toggle enbauges-filter-toggle--solution"
+                :class="{ 'enbauges-filter-toggle--active': filterType === 'solution' && !showMyCards }"
+                @click="filterType = 'solution'; showMyCards = false;"
+              >
+                Solutions
+              </button>
+              <button 
+                class="enbauges-filter-toggle enbauges-filter-toggle--initiative"
+                :class="{ 'enbauges-filter-toggle--active': filterType === 'initiative' && !showMyCards }"
+                @click="filterType = 'initiative'; showMyCards = false;"
+              >
+                Initiatives
+              </button>
+              <span style="width: 1px; background: var(--enbauges-brown-light); margin: 0 0.25rem;"></span>
+              <button 
+                class="enbauges-filter-toggle"
+                :class="{ 'enbauges-filter-toggle--active': showMyCards }"
+                @click="showMyCards = !showMyCards; if(showMyCards) { filterType = 'all'; showMyFavorites = false; }"
+                style="border-color: var(--enbauges-amber);"
+              >
+                Mes cartes
+              </button>
+              <button 
+                class="enbauges-filter-toggle"
+                :class="{ 'enbauges-filter-toggle--active': showMyFavorites }"
+                @click="showMyFavorites = !showMyFavorites; if(showMyFavorites) { filterType = 'all'; showMyCards = false; }"
+                style="border-color: #DC2626;"
+              >
+                ❤️ Favoris
+              </button>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <select v-model="sortBy" class="enbauges-input" style="width: auto; padding: 0.5rem 1rem; min-height: 40px;">
+                <option value="recent">Plus récents</option>
+                <option value="votes">Plus votés</option>
+              </select>
+              <button 
+                class="enbauges-btn-secondary" 
+                style="padding: 0.5rem;"
+                @click="viewMode = viewMode === 'grid' ? 'list' : 'grid'"
+                :title="viewMode === 'grid' ? 'Vue liste' : 'Vue grille'"
+              >
+                <svg v-if="viewMode === 'grid'" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M3 4h14v3H3V4zm0 4.5h14v3H3v-3zm0 4.5h14v3H3v-3z"/>
+                </svg>
+                <svg v-else width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M5 3v14h10V3H5zm9 12H6v-3h8v3zm0-4H6V8h8v3zm0-4H6V4h8v3z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div style="margin-top: 0.75rem;">
+            <input 
+              v-model="searchQuery" 
+              type="search" 
+              class="enbauges-input" 
+              placeholder="Rechercher par titre, description ou tag..."
+              style="max-width: 400px;"
+            >
+          </div>
+        </div>
+
+        <div v-if="loading" style="text-align: center; padding: 4rem;">
+          <div style="color: var(--enbauges-sage); font-weight: 500;">Chargement...</div>
+        </div>
+
+        <div v-else-if="cards.length === 0 && !hasFilters" class="enbauges-empty-state">
+          <svg class="enbauges-empty-state__icon" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="60" cy="60" r="50" fill="#7A9E7E" opacity="0.2"/>
+            <circle cx="60" cy="60" r="35" fill="#7A9E7E" opacity="0.3"/>
+            <circle cx="60" cy="60" r="20" fill="#7A9E7E" opacity="0.4"/>
+            <path d="M60 25C45 25 30 40 30 60C30 80 45 95 60 95C75 95 90 80 90 60" stroke="#D4A03C" stroke-width="3" stroke-linecap="round"/>
+            <path d="M60 25C75 25 90 40 90 60C90 80 75 95 60 95" stroke="#C2703A" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="60" cy="60" r="8" fill="#D4A03C"/>
+          </svg>
+          <h2 class="enbauges-empty-state__title">Faites vivre la carte du territoire</h2>
+          <p class="enbauges-empty-state__text">
+            Ajoutez les acteurs, solutions et initiatives que vous connaissez.
+            Un nom, quelques mots — c'est tout ce qu'il faut pour commencer.
+          </p>
+          <button class="enbauges-btn-primary" @click="showAddModal = true">
+            + Ajouter une carte
+          </button>
+          
+          <div style="margin-top: 3rem; text-align: left; max-width: 600px; margin-left: auto; margin-right: auto;">
+            <p style="font-size: 0.875rem; color: var(--enbauges-brown); margin-bottom: 1rem;">Exemples pour vous inspirer :</p>
+            <div style="display: grid; gap: 1rem;">
+              <div style="background: #DCFCE7; border-radius: 0.75rem; padding: 1rem; border-left: 4px solid #16A34A;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                  <span style="background: #16A34A; color: white; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.6875rem; font-weight: 600;">EXEMPLE</span>
+                  <span class="enbauges-badge-solution">Solution</span>
+                  <span style="font-weight: 600; color: var(--enbauges-earth);">AMAP locale</span>
+                </div>
+                <p style="font-size: 0.8125rem; color: #166534; font-style: italic;">
+                  "Paniers de légumes en circuit court, tous les jeudis au Châtelard"
+                </p>
+              </div>
+
+              <div style="background: #DCFCE7; border-radius: 0.75rem; padding: 1rem; border-left: 4px solid #16A34A;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                  <span style="background: #16A34A; color: white; padding: 0.125rem 0.5rem; border-radius: 0.25rem; font-size: 0.6875rem; font-weight: 600;">EXEMPLE</span>
+                  <span class="enbauges-badge-actor">Acteur</span>
+                  <span style="font-weight: 600; color: var(--enbauges-earth);">Atelier vélo participatif</span>
+                </div>
+                <p style="font-size: 0.8125rem; color: #166534; font-style: italic;">
+                  "On répare ensemble, on apprend, on partage les outils"
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else-if="cards.length === 0" class="enbauges-empty-state">
+          <h2 class="enbauges-empty-state__title">Aucun résultat</h2>
+          <p class="enbauges-empty-state__text">
+            Aucun carte ne correspond à vos critères de recherche.
+          </p>
+          <button class="enbauges-btn-secondary" @click="clearFilters">
+            Effacer les filtres
+          </button>
+        </div>
+
+        <div v-else-if="showMyCards && filteredCards.length === 0" class="enbauges-empty-state">
+          <svg class="enbauges-empty-state__icon" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="60" cy="60" r="50" fill="#D4A03C" opacity="0.2"/>
+            <circle cx="60" cy="60" r="30" stroke="#D4A03C" stroke-width="3" fill="none"/>
+            <path d="M60 45v30M45 60h30" stroke="#D4A03C" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          <h2 class="enbauges-empty-state__title">Pas encore de cartes</h2>
+          <p class="enbauges-empty-state__text">
+            Vous n'avez pas encore créé de cartes. Ajoutez votre première carte pour commencer à contribuer!
+          </p>
+          <button class="enbauges-btn-primary" @click="showAddModal = true">
+            + Ajouter une carte
+          </button>
+        </div>
+
+        <div v-else-if="showMyFavorites && filteredCards.length === 0" class="enbauges-empty-state">
+          <svg class="enbauges-empty-state__icon" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="60" cy="60" r="50" fill="#DC2626" opacity="0.2"/>
+            <path d="M60 20L65 40H85L70 52L75 72L60 60L45 72L50 52L35 40H55L60 20Z" fill="#DC2626" opacity="0.4"/>
+          </svg>
+          <h2 class="enbauges-empty-state__title">Aucun favori</h2>
+          <p class="enbauges-empty-state__text">
+            Cliquez sur le cœur d'une carte pour l'ajouter à vos favoris.
+          </p>
+        </div>
+
+        <div v-if="showMyFavorites && filteredCards.length > 0" :class="viewMode === 'grid' ? 'enbauges-grid' : 'enbauges-list'">
+          <div 
+            v-for="card in filteredCards" 
+            :key="card._id"
+            class="enbauges-card"
+            :class="[
+              'enbauges-card--' + card.type,
+              { 'enbauges-card--hover': true }
+            ]"
+            @click="selectCard(card)"
+          >
+            <div style="padding: 1.25rem;">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <button @click.stop="toggleFavorite(card)" :style="{ color: isFavorited(card._id) ? '#DC2626' : 'var(--enbauges-brown-light)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }">
+                    <svg width="14" height="14" viewBox="0 0 14 14" :fill="isFavorited(card._id) ? '#DC2626' : 'none'" stroke="currentColor" stroke-width="1.5">
+                      <path d="M7 1L8.5 5H13L9.5 7.5L11 12L7 9.5L3 12L4.5 7.5L1 5H5.5L7 1Z"/>
+                    </svg>
+                  </button>
+                  <span v-if="card.isExample" style="background: #6B7280; color: white; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.625rem; font-weight: 600;">EXEMPLE</span>
+                  <span :class="'enbauges-badge-' + card.type">
+                    {{ card.type === 'actor' ? 'Acteur' : card.type === 'solution' ? 'Solution' : 'Initiative' }}
+                  </span>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <button 
+                    class="enbauges-vote-btn"
+                    :class="{ 'enbauges-vote-btn--voted': hasVoted(card) }"
+                    @click.stop="toggleVote(card)"
+                    style="min-height: 36px; padding: 0.375rem 0.625rem;"
+                  >
+                    👍
+                    <span style="font-size: 0.8125rem;">{{ card.votes || 0 }}</span>
+                  </button>
+                </div>
+              </div>
+              
+              <h3 style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.5rem; font-size: 1.0625rem;">
+                {{ card.title }}
+              </h3>
+              
+              
+              <p style="font-size: 0.875rem; color: var(--enbauges-brown); margin-bottom: 0.75rem; line-height: 1.5;">
+                {{ truncate(card.description, 100) }}
+              </p>
+              
+              <div v-if="card.tags && card.tags.length > 0" style="display: flex; gap: 0.375rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                <span v-for="tag in card.tags.slice(0, 3)" :key="tag" class="enbauges-tag">
+                  {{ tag }}
+                </span>
+                <span v-if="card.tags.length > 3" style="font-size: 0.75rem; color: var(--enbauges-brown);">
+                  +{{ card.tags.length - 3 }}
+                </span>
+              </div>
+              
+              <div style="display: flex; gap: 1rem; font-size: 0.75rem; color: var(--enbauges-brown);">
+                <span v-if="card.url">
+                  <a :href="card.url" target="_blank" rel="noopener" @click.stop style="color: var(--enbauges-sage);">
+                    ↗ Lien
+                  </a>
+                </span>
+                <span>{{ formatDate(card.createdAt) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!showMyFavorites && (favoritedCards.length > 0 || favoriteCards.length > 0)" style="margin-bottom: 1.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="var(--enbauges-amber)">
+              <path d="M9 1L11 7H17L12 11L14 17L9 13L4 17L6 11L1 7H7L9 1Z"/>
+            </svg>
+            <span style="font-weight: 600; color: var(--enbauges-amber); font-size: 0.9375rem;">Favoris</span>
+            <span style="color: var(--enbauges-brown); font-size: 0.8125rem;">({{ favoritedCards.length }})</span>
+          </div>
+          <div v-if="favoritedCards.length > 0" :class="viewMode === 'grid' ? 'enbauges-grid' : 'enbauges-list'">
+            <div 
+              v-for="card in favoritedCards" 
+              :key="card._id"
+              class="enbauges-card"
+              :class="[
+                'enbauges-card--' + card.type,
+                { 'enbauges-card--hover': true }
+              ]"
+              style="border-left: 3px solid var(--enbauges-amber);"
+              @click="selectCard(card)"
+            >
+              <div style="padding: 1.25rem;">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button @click.stop="toggleFavorite(card)" :style="{ color: isFavorited(card._id) ? '#DC2626' : 'var(--enbauges-brown-light)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }">
+                      <svg width="14" height="14" viewBox="0 0 14 14" :fill="isFavorited(card._id) ? '#DC2626' : 'none'" stroke="currentColor" stroke-width="1.5">
+                        <path d="M7 1L8.5 5H13L9.5 7.5L11 12L7 9.5L3 12L4.5 7.5L1 5H5.5L7 1Z"/>
+                      </svg>
+                    </button>
+                    <span v-if="card.isExample" style="background: #6B7280; color: white; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.625rem; font-weight: 600;">EXEMPLE</span>
+                    <span :class="'enbauges-badge-' + card.type">
+                      {{ card.type === 'actor' ? 'Acteur' : card.type === 'solution' ? 'Solution' : 'Initiative' }}
+                    </span>
+                  </div>
+                  <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button 
+                      class="enbauges-vote-btn"
+                      :class="{ 'enbauges-vote-btn--voted': hasVoted(card) }"
+                      @click.stop="toggleVote(card)"
+                      style="min-height: 36px; padding: 0.375rem 0.625rem;"
+                    >
+                      👍
+                      <span style="font-size: 0.8125rem;">{{ card.votes || 0 }}</span>
+                    </button>
+                  </div>
+                </div>
+                
+                <h3 style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.5rem; font-size: 1.0625rem;">
+                  {{ card.title }}
+                </h3>
+                
+                
+                <p style="font-size: 0.875rem; color: var(--enbauges-brown); margin-bottom: 0.75rem; line-height: 1.5;">
+                  {{ truncate(card.description, 100) }}
+                </p>
+                
+                <div v-if="card.tags && card.tags.length > 0" style="display: flex; gap: 0.375rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                  <span v-for="tag in card.tags.slice(0, 3)" :key="tag" class="enbauges-tag">
+                    {{ tag }}
+                  </span>
+                  <span v-if="card.tags.length > 3" style="font-size: 0.75rem; color: var(--enbauges-brown);">
+                    +{{ card.tags.length - 3 }}
+                  </span>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; font-size: 0.75rem; color: var(--enbauges-brown);">
+                  <span v-if="card.url">
+                    <a :href="card.url" target="_blank" rel="noopener" @click.stop style="color: var(--enbauges-sage);">
+                      ↗ Lien
+                    </a>
+                  </span>
+                  <span>{{ formatDate(card.createdAt) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else style="text-align: center; padding: 1.5rem; color: var(--enbauges-brown); font-size: 0.875rem;">
+            Aucun de vos favoris ne correspond aux critères de filtrage.
+          </div>
+        </div>
+        
+        <div v-if="!showMyFavorites && otherCards.length > 0" style="margin-bottom: 1rem;">
+          <button 
+            @click="toggleOtherCards"
+            style="display: flex; align-items: center; gap: 0.75rem; width: 100%; background: var(--enbauges-cream); border: none; border-radius: 0.5rem; padding: 0.75rem 1rem; cursor: pointer; text-align: left;"
+          >
+            <svg 
+              width="16" 
+              height="16" 
+              viewBox="0 0 16 16" 
+              fill="var(--enbauges-sage)"
+              :style="{ transform: showOtherCards ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 200ms ease' }"
+            >
+              <path d="M4 6l4 4 4-4" stroke="var(--enbauges-sage)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span style="font-weight: 600; color: var(--enbauges-earth); font-size: 0.9375rem;">Autres cartes</span>
+            <span style="color: var(--enbauges-brown); font-size: 0.8125rem;">({{ otherCards.length }})</span>
+          </button>
+          
+          <div v-if="showOtherCards" :class="viewMode === 'grid' ? 'enbauges-grid' : 'enbauges-list'" style="margin-top: 1rem;">
+            <div 
+              v-for="card in otherCards" 
+              :key="card._id"
+              class="enbauges-card"
+              :class="[
+                'enbauges-card--' + card.type,
+                { 'enbauges-card--hover': true }
+              ]"
+              @click="selectCard(card)"
+            >
+              <div style="padding: 1.25rem;">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button @click.stop="toggleFavorite(card)" :style="{ color: isFavorited(card._id) ? '#DC2626' : 'var(--enbauges-brown-light)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }">
+                      <svg width="14" height="14" viewBox="0 0 14 14" :fill="isFavorited(card._id) ? '#DC2626' : 'none'" stroke="currentColor" stroke-width="1.5">
+                        <path d="M7 1L8.5 5H13L9.5 7.5L11 12L7 9.5L3 12L4.5 7.5L1 5H5.5L7 1Z"/>
+                      </svg>
+                    </button>
+                    <span v-if="card.isExample" style="background: #6B7280; color: white; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.625rem; font-weight: 600;">EXEMPLE</span>
+                    <span :class="'enbauges-badge-' + card.type">
+                      {{ card.type === 'actor' ? 'Acteur' : card.type === 'solution' ? 'Solution' : 'Initiative' }}
+                    </span>
+                  </div>
+                  <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button 
+                      class="enbauges-vote-btn"
+                      :class="{ 'enbauges-vote-btn--voted': hasVoted(card) }"
+                      @click.stop="toggleVote(card)"
+                      style="min-height: 36px; padding: 0.375rem 0.625rem;"
+                    >
+                      👍
+                      <span style="font-size: 0.8125rem;">{{ card.votes || 0 }}</span>
+                    </button>
+                  </div>
+                </div>
+                
+                <h3 style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.5rem; font-size: 1.0625rem;">
+                  {{ card.title }}
+                </h3>
+                
+                  
+                <p style="font-size: 0.875rem; color: var(--enbauges-brown); margin-bottom: 0.75rem; line-height: 1.5;">
+                  {{ truncate(card.description, 100) }}
+                </p>
+                  
+                <div v-if="card.tags && card.tags.length > 0" style="display: flex; gap: 0.375rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                  <span v-for="tag in card.tags.slice(0, 3)" :key="tag" class="enbauges-tag">
+                    {{ tag }}
+                  </span>
+                  <span v-if="card.tags.length > 3" style="font-size: 0.75rem; color: var(--enbauges-brown);">
+                    +{{ card.tags.length - 3 }}
+                  </span>
+                </div>
+                  
+                <div style="display: flex; gap: 1rem; font-size: 0.75rem; color: var(--enbauges-brown);">
+                  <span v-if="card.url">
+                    <a :href="card.url" target="_blank" rel="noopener" @click.stop style="color: var(--enbauges-sage);">
+                      ↗ Lien
+                    </a>
+                  </span>
+                  <span>{{ formatDate(card.createdAt) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div v-if="showAddModal" class="enbauges-modal-backdrop" @click.self="closeAddModal">
+      <div class="enbauges-modal">
+        <div class="enbauges-modal__header">
+          <h2 class="enbauges-modal__title">{{ isEditMode ? 'Modifier la carte' : 'Ajouter une carte' }}</h2>
+        </div>
+        <div class="enbauges-modal__body">
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Type
+            </label>
+            <div style="display: flex; gap: 0.5rem;">
+              <button 
+                v-for="t in ['actor', 'solution', 'initiative']" 
+                :key="t"
+                class="enbauges-filter-toggle"
+                :class="[
+                  'enbauges-filter-toggle--' + t,
+                  { 'enbauges-filter-toggle--active': form.type === t }
+                ]"
+                style="flex: 1;"
+                @click="form.type = t"
+              >
+                {{ t === 'actor' ? 'Acteur' : t === 'solution' ? 'Solution' : 'Initiative' }}
+              </button>
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Titre *
+            </label>
+            <input 
+              v-model="form.title" 
+              type="text" 
+              class="enbauges-input" 
+              placeholder="Nom de l'acteur, de la solution ou de l'initiative"
+              maxlength="200"
+            >
+            <div style="font-size: 0.75rem; color: var(--enbauges-brown); margin-top: 0.25rem; text-align: right;">
+              {{ form.title.length }}/200
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Description *
+            </label>
+            <textarea 
+              v-model="form.description" 
+              class="enbauges-input" 
+              rows="3"
+              placeholder="Décrivez brièvement..."
+              maxlength="500"
+              style="resize: vertical;"
+            ></textarea>
+            <div style="font-size: 0.75rem; color: var(--enbauges-brown); margin-top: 0.25rem; text-align: right;">
+              {{ form.description.length }}/500
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Tags
+            </label>
+            <input 
+              v-model="tagsInput" 
+              type="text" 
+              class="enbauges-input" 
+              placeholder="Séparés par des virgules (ex: collaboratif, numérique)"
+            >
+          </div>
+          
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              URL
+            </label>
+            <input 
+              v-model="form.url" 
+              type="url" 
+              class="enbauges-input" 
+              placeholder="https://..."
+            >
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Contact
+            </label>
+            <input 
+              v-model="form.contact" 
+              type="text" 
+              class="enbauges-input" 
+              placeholder="Email ou autre moyen de contact"
+            >
+          </div>
+          
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Adresse (optionnel)
+            </label>
+            <input 
+              v-model="form.address" 
+              type="text" 
+              class="enbauges-input" 
+              placeholder="Rechercher une adresse..."
+              @input="onAddressInput"
+            >
+            <div v-if="addressSuggestions.length > 0" style="border: 1px solid var(--enbauges-brown-light); border-radius: 0.5rem; margin-top: 0.25rem; max-height: 150px; overflow-y: auto; background: white;">
+              <div 
+                v-for="(suggestion, index) in addressSuggestions" 
+                :key="index"
+                @click="selectAddress(suggestion)"
+                style="padding: 0.5rem 0.75rem; cursor: pointer; font-size: 0.875rem; color: var(--enbauges-brown);"
+                onmouseover="this.style.background='var(--enbauges-cream)'"
+                onmouseout="this.style.background='white'"
+              >
+                {{ suggestion.display_name }}
+              </div>
+            </div>
+            <div v-if="form.lat && form.lng" style="font-size: 0.75rem; color: var(--enbauges-sage); margin-top: 0.25rem;">
+              ✓ Position sélectionnée: {{ form.lat.toFixed(4) }}, {{ form.lng.toFixed(4) }}
+            </div>
+            <button 
+              type="button"
+              @click="openMapPicker"
+              style="margin-top: 0.5rem; padding: 0.375rem 0.75rem; background: var(--enbauges-sage); color: white; border: none; border-radius: 0.375rem; font-size: 0.8125rem; cursor: pointer;"
+            >
+              📍 Pick in map
+            </button>
+          </div>
+          
+          <div v-if="formError" style="color: #DC2626; font-size: 0.875rem; margin-bottom: 1rem;">
+            {{ formError }}
+          </div>
+        </div>
+        <div class="enbauges-modal__footer">
+          <button class="enbauges-btn-secondary" @click="closeAddModal">Annuler</button>
+          <button class="enbauges-btn-primary" @click="submitCard" :disabled="submitting">
+            {{ submitting ? (isEditMode ? 'Modification...' : 'Ajout...') : (isEditMode ? 'Modifier' : 'Ajouter') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+        <div v-if="selectedCard && !isEditMode" class="enbauges-modal-backdrop" @click.self="selectedCard = null">
+      <div class="enbauges-modal" style="max-width: 44rem;">
+        <div class="enbauges-modal__header">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span :class="'enbauges-badge-' + selectedCard.type">
+              {{ selectedCard.type === 'actor' ? 'Acteur' : selectedCard.type === 'solution' ? 'Solution' : 'Initiative' }}
+            </span>
+            <button @click="selectedCard = null" style="background: none; border: none; cursor: pointer; padding: 0.5rem;">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="var(--enbauges-brown)">
+                <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+          <h2 class="enbauges-modal__title" style="margin-top: 0.75rem;">{{ selectedCard.title }}</h2>
+        </div>
+        <div class="enbauges-modal__body">
+          <p style="color: var(--enbauges-earth); line-height: 1.6; margin-bottom: 1rem;">
+            {{ selectedCard.description }}
+          </p>
+          
+          <div v-if="selectedCard.tags && selectedCard.tags.length > 0" style="display: flex; gap: 0.375rem; flex-wrap: wrap; margin-bottom: 1rem;">
+            <span v-for="tag in selectedCard.tags" :key="tag" class="enbauges-tag">
+              {{ tag }}
+            </span>
+          </div>
+          
+          <div style="display: flex; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--enbauges-cream); border-radius: 0.5rem;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="var(--enbauges-sage)">
+                <path d="M8 1L9.5 5.5H14L10 8.5L11.5 13L8 10.5L4.5 13L6 8.5L2 5.5H6.5L8 1Z"/>
+              </svg>
+              <span style="font-weight: 600; color: var(--enbauges-earth);">{{ selectedCard.votes || 0 }}</span>
+              <span style="font-size: 0.8125rem; color: var(--enbauges-brown);">Utile</span>
+            </div>
+            
+            <div v-if="cardLinks.length > 0" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--enbauges-amber); color: white; border-radius: 0.5rem;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M6 8h4M6 4h4M6 12h4M4 8a4 4 0 1 0 8 0 4 4 0 1 0-8 0z" stroke="currentColor" stroke-width="2" fill="none"/>
+              </svg>
+              <span style="font-weight: 600;">{{ cardLinks.length }}</span>
+              <span style="font-size: 0.8125rem;">{{ cardLinks.length === 1 ? 'lien' : 'liens' }}</span>
+            </div>
+            
+            <button 
+              class="enbauges-vote-btn"
+              :class="{ 'enbauges-vote-btn--voted': hasVoted(selectedCard) }"
+              @click="toggleVote(selectedCard)"
+              style="padding: 0.5rem 0.75rem;"
+            >
+              👍
+              <span style="font-size: 0.8125rem;">Utile pour le territoire</span>
+            </button>
+            
+            <a v-if="selectedCard.url" :href="selectedCard.url" target="_blank" rel="noopener" class="enbauges-link">
+              ↗ Voir le site
+            </a>
+          </div>
+          
+          <div v-if="selectedCard.contact" style="font-size: 0.875rem; color: var(--enbauges-brown); margin-bottom: 1rem;">
+            <strong>Contact:</strong> {{ selectedCard.contact }}
+          </div>
+          
+          <div style="font-size: 0.75rem; color: var(--enbauges-brown); margin-bottom: 1rem;">
+            Créé le {{ formatDate(selectedCard.createdAt) }}
+          </div>
+          
+          <div style="display: flex; gap: 0.75rem; margin-bottom: 1.25rem;">
+            <button 
+              class="enbauges-btn-secondary" 
+              style="flex: 1;"
+              @click="startEdit"
+            >
+              Modifier
+            </button>
+            <button 
+              v-if="myCards.includes(selectedCard._id)"
+              class="enbauges-btn-secondary" 
+              style="flex: 1; border-color: #DC2626; color: #DC2626;"
+              @click="deleteCard"
+              :disabled="deleting"
+            >
+              {{ deleting ? 'Suppression...' : 'Supprimer' }}
+            </button>
+          </div>
+          
+          <div style="border-top: 1px solid var(--enbauges-cream); padding-top: 1rem;">
+            <h4 style="font-weight: 600; margin-bottom: 0.75rem; color: var(--enbauges-earth);">
+              Lier à d'autres cartes
+            </h4>
+            <div v-if="!linkMode">
+              <button class="enbauges-btn-secondary" style="width: 100%;" @click="startLinkMode">
+                + Créer un lien
+              </button>
+            </div>
+            <div v-else>
+              <div style="margin-bottom: 0.75rem;">
+                <select v-model="linkTargetId" class="enbauges-input" style="margin-bottom: 0.5rem;">
+                  <option value="">Sélectionner une carte...</option>
+                  <option v-for="c in otherCards" :key="c._id" :value="c._id">
+                    [{{ c.type === 'actor' ? 'Acteur' : c.type === 'solution' ? 'Solution' : 'Initiative' }}] {{ c.title }}
+                  </option>
+                </select>
+                <select v-model="linkType" class="enbauges-input">
+                  <option value="">Type de relation...</option>
+                  <option value="depends_on">Dépend de</option>
+                  <option value="reinforces">Renforce</option>
+                  <option value="uses">Utilise</option>
+                  <option value="inspires">Inspire</option>
+                </select>
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button class="enbauges-btn-secondary" @click="cancelLinkMode">Annuler</button>
+                <button class="enbauges-btn-primary" @click="createLink" :disabled="!linkTargetId || !linkType">
+                  Créer le lien
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="cardLinks.length > 0" style="border-top: 1px solid var(--enbauges-cream); padding-top: 1rem; margin-top: 1rem;">
+            <h4 style="font-weight: 600; margin-bottom: 0.75rem; color: var(--enbauges-earth);">
+              Liens ({{ cardLinks.length }})
+            </h4>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <div v-for="link in cardLinks" :key="link._id" class="enbauges-card--soft" style="padding: 0.75rem; border-radius: 0.5rem; font-size: 0.875rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span :class="'enbauges-badge-' + (link.sourceCardId._id === selectedCard._id ? link.targetCardId.type : link.sourceCardId.type)">
+                      {{ getRelationLabel(link) }}
+                    </span>
+                    <button @click="navigateToCard(link)" style="background: none; border: none; cursor: pointer; padding: 0; text-align: left;">
+                      <span style="color: var(--enbauges-sage); font-weight: 500; text-decoration: underline; text-decoration-style: dotted;">
+                        {{ link.sourceCardId._id === selectedCard._id ? link.targetCardId.title : link.sourceCardId.title }}
+                      </span>
+                    </button>
+                  </div>
+                  <button @click="deleteLink(link._id)" style="background: none; border: none; cursor: pointer; color: var(--enbauges-brown); padding: 0.25rem;">
+                    ×
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div style="border-top: 1px solid var(--enbauges-cream); padding-top: 1rem; margin-top: 1rem;">
+            <h4 style="font-weight: 600; margin-bottom: 0.75rem; color: var(--enbauges-earth);">
+              Commentaires
+            </h4>
+            <div v-if="cardComments.length === 0" style="color: var(--enbauges-brown); font-size: 0.875rem; margin-bottom: 0.75rem;">
+              Aucun commentaire.
+            </div>
+            <div v-else style="margin-bottom: 1rem;">
+              <div v-for="comment in cardComments" :key="comment._id" class="enbauges-comment">
+                <div class="enbauges-comment__meta">{{ formatDate(comment.createdAt) }}</div>
+                <div class="enbauges-comment__text">{{ comment.content }}</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <input 
+                v-model="newComment" 
+                type="text" 
+                class="enbauges-input" 
+                placeholder="Ajouter un commentaire..."
+                style="flex: 1;"
+                @keyup.enter="submitComment"
+              >
+              <button class="enbauges-btn-primary" @click="submitComment" :disabled="!newComment.trim()">
+                Envoyer
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showClaimModal" class="enbauges-modal-backdrop" @click.self="cancelClaim">
+      <div class="enbauges-modal" style="max-width: 28rem;">
+        <div class="enbauges-modal__header">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 2rem;">⚠️</span>
+            <button @click="cancelClaim" style="background: none; border: none; cursor: pointer; padding: 0.5rem;">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="var(--enbauges-brown)">
+                <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="enbauges-modal__body">
+          <p style="margin-bottom: 1rem; line-height: 1.6;">
+            Les cartes n'ont pas de propriétaire, mais cela ne signifie pas que n'importe qui peut modifier n'importe quelle carte.
+          </p>
+          <p style="margin-bottom: 1rem; line-height: 1.6; color: var(--enbauges-earth); font-weight: 500;">
+            Assurez-vous que la modification prévue est une contribution positive avant de continuer (pas un acte malveillant).
+          </p>
+          <p style="margin-bottom: 1.5rem; font-size: 0.875rem; color: var(--enbauges-brown);">
+            Continuer ?
+          </p>
+          <div style="display: flex; gap: 0.75rem;">
+            <button @click="cancelClaim" class="enbauges-btn-secondary" style="flex: 1;">
+              Annuler
+            </button>
+            <button @click="proceedEdit" class="enbauges-btn-primary" style="flex: 1;">
+              Continuer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-show="showMapPicker" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center; display: flex;">
+      <div style="background: white; border-radius: 1rem; width: 90%; max-width: 800px; height: 80%; display: flex; flex-direction: column;">
+        <div style="padding: 1rem; border-bottom: 1px solid var(--enbauges-cream); display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin: 0; color: var(--enbauges-earth);">Sélectionner une adresse</h3>
+          <button @click="closeMapPicker" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0.25rem;">×</button>
+        </div>
+        <div style="flex: 1; position: relative;">
+          <div id="map-picker" style="width: 100%; height: 100%; border-radius: 0 0 1rem 1rem;"></div>
+        </div>
+        <div style="padding: 1rem; border-top: 1px solid var(--enbauges-cream); display: flex; gap: 0.5rem;">
+          <button @click="closeMapPicker" style="padding: 0.5rem 1rem; background: var(--enbauges-sage); color: white; border: none; border-radius: 0.5rem; cursor: pointer;">Confirmer</button>
+          <button @click="closeMapPicker" style="padding: 0.5rem 1rem; background: var(--enbauges-brown-light); border: none; border-radius: 0.5rem; cursor: pointer;">Annuler</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
+    
+    const app = createApp({
+      setup() {
+        const cards = ref([]);
+        const loading = ref(true);
+        const filterType = ref('all');
+        const sortBy = ref('recent');
+        const searchQuery = ref('');
+        const viewMode = ref('grid');
+        const showAddModal = ref(false);
+        const isEditMode = ref(false);
+        const editingCardId = ref(null);
+        const selectedCard = ref(null);
+        const cardComments = ref([]);
+        const cardLinks = ref([]);
+        const linkMode = ref(false);
+        const linkTargetId = ref('');
+        const linkType = ref('');
+        const newComment = ref('');
+        const submitting = ref(false);
+        const formError = ref('');
+        const deleting = ref(false);
+        const showMyCards = ref(false);
+        const showMyFavorites = ref(false);
+        const showOtherCards = ref(localStorage.getItem('enbauges_other_cards_folded') !== 'true');
+        const aboutFolded = ref(localStorage.getItem('enbauges_about_folded') !== 'false');
+        const showClaimModal = ref(false);
+        const claimingCard = ref(null);
+        const showGraphMode = ref(false);
+        const graphLoading = ref(false);
+        let cyInstance = null;
+
+        function toggleOtherCards() {
+          showOtherCards.value = !showOtherCards.value;
+          localStorage.setItem('enbauges_other_cards_folded', String(!showOtherCards.value));
+        }
+        
+        function toggleAbout() {
+          aboutFolded.value = !aboutFolded.value;
+          localStorage.setItem('enbauges_about_folded', String(aboutFolded.value));
+        }
+        
+        const toast = reactive({ show: false, message: '', type: 'success' });
+        
+        function showToast(message, type = 'success') {
+          toast.message = message;
+          toast.type = type;
+          toast.show = true;
+          setTimeout(() => { toast.show = false; }, 3000);
+        }
+
+        async function openGraphMode() {
+          showGraphMode.value = true;
+          graphLoading.value = true;
+          await Vue.nextTick();
+          await initGraph();
+        }
+
+        function closeGraphMode() {
+          if (cyInstance) { cyInstance.destroy(); cyInstance = null; }
+          showGraphMode.value = false;
+        }
+
+        async function initGraph() {
+          try {
+            const [cardsRes, linksRes] = await Promise.all([
+              fetch('/api/cards?limit=1000'),
+              fetch('/api/links')
+            ]);
+            const { cards: allCards } = await cardsRes.json();
+            const { links: allLinks } = await linksRes.json();
+
+            const degrees = {};
+            allLinks.forEach(l => {
+              const src = l.sourceCardId?._id || l.sourceCardId;
+              const tgt = l.targetCardId?._id || l.targetCardId;
+              degrees[src] = (degrees[src] || 0) + 1;
+              degrees[tgt] = (degrees[tgt] || 0) + 1;
+            });
+
+            const typeColor = { actor: '#C2703A', solution: '#7A9E7E', initiative: '#D4A03C' };
+
+            const elements = [
+              ...allCards.map(c => ({
+                data: {
+                  id: c._id,
+                  label: c.title,
+                  color: typeColor[c.type] || '#8B7355',
+                  size: Math.max(28, Math.min(90, 28 + (degrees[c._id] || 0) * 12)),
+                  card: c
+                }
+              })),
+              ...allLinks.map(l => ({
+                data: {
+                  id: l._id,
+                  source: l.sourceCardId?._id || l.sourceCardId,
+                  target: l.targetCardId?._id || l.targetCardId,
+                  relType: l.relationshipType
+                }
+              }))
+            ];
+
+            cyInstance = cytoscape({
+              container: document.getElementById('cy'),
+              elements,
+              style: [
+                {
+                  selector: 'node',
+                  style: {
+                    'background-color': 'data(color)',
+                    'width': 'data(size)',
+                    'height': 'data(size)',
+                    'label': 'data(label)',
+                    'color': '#FAF7F2',
+                    'font-size': 11,
+                    'text-valign': 'bottom',
+                    'text-margin-y': 5,
+                    'text-wrap': 'ellipsis',
+                    'text-max-width': 90,
+                    'border-width': 2,
+                    'border-color': 'rgba(255,255,255,0.18)'
+                  }
+                },
+                {
+                  selector: 'node:hover',
+                  style: {
+                    'border-color': '#FAF7F2',
+                    'border-width': 3,
+                    'cursor': 'pointer'
+                  }
+                },
+                {
+                  selector: 'edge',
+                  style: {
+                    'line-color': 'rgba(250,247,242,0.18)',
+                    'width': 1.5,
+                    'curve-style': 'bezier',
+                    'target-arrow-shape': 'triangle',
+                    'target-arrow-color': 'rgba(250,247,242,0.18)',
+                    'arrow-scale': 0.8
+                  }
+                }
+              ],
+              layout: {
+                name: 'cose',
+                animate: true,
+                animationDuration: 900,
+                nodeRepulsion: 9000,
+                idealEdgeLength: 130,
+                gravity: 0.25,
+                randomize: true,
+                fit: true,
+                padding: 60
+              },
+              minZoom: 0.1,
+              maxZoom: 4
+            });
+
+            cyInstance.on('tap', 'node', e => {
+              const card = e.target.data('card');
+              if (card) selectCard(card);
+            });
+          } catch (err) {
+            console.error('Graph init error:', err);
+            showToast('Erreur lors du chargement du graphe', 'error');
+          } finally {
+            graphLoading.value = false;
+          }
+        }
+
+        const form = reactive({
+          type: 'actor',
+          title: '',
+          description: '',
+          url: '',
+          contact: '',
+          address: '',
+          lat: null,
+          lng: null
+        });
+        
+        const tagsInput = ref('');
+        
+        const addressSuggestions = ref([]);
+        let addressTimeout = null;
+
+        const showMapPicker = ref(false);
+        console.log('🔍 [DEBUG] showMapPicker initialized:', showMapPicker.value);
+        let mapPickerInstance = null;
+        let mapPickerMarker = null;
+        
+        const voterId = ref(localStorage.getItem('enbauges_voter_id') || (
+          localStorage.setItem('enbauges_voter_id', 'v_' + Math.random().toString(36).slice(2)),
+          localStorage.getItem('enbauges_voter_id')
+        ));
+        
+        const myVotes = ref(JSON.parse(localStorage.getItem('enbauges_my_votes') || '[]'));
+        
+        const myCards = ref(JSON.parse(localStorage.getItem('enbauges_my_cards') || '[]'));
+        
+        const favoriteCards = ref(JSON.parse(localStorage.getItem('enbauges_favorite_cards') || '[]'));
+        
+        const hasFilters = computed(() => {
+          return filterType.value !== 'all' || searchQuery.value.trim() !== '' || showMyCards.value || showMyFavorites.value;
+        });
+        
+        const filteredCards = computed(() => {
+          if (!cards.value) return [];
+          let result = cards.value;
+          if (showMyCards.value) {
+            result = result.filter(c => myCards.value.includes(c._id));
+          }
+          if (showMyFavorites.value) {
+            result = result.filter(c => favoriteCards.value.includes(c._id));
+          }
+          return result;
+        });
+        
+        const favoritedCards = computed(() => {
+          if (!filteredCards.value) return [];
+          return filteredCards.value.filter(c => favoriteCards.value.includes(c._id));
+        });
+        
+        const otherCards = computed(() => {
+          if (!cards.value) return [];
+          let result = cards.value.filter(c => !favoriteCards.value.includes(c._id));
+          if (selectedCard.value) {
+            result = result.filter(c => c._id !== selectedCard.value._id);
+          }
+          return result;
+        });
+        
+        async function loadCards() {
+          loading.value = true;
+          try {
+            const params = new URLSearchParams();
+            if (filterType.value !== 'all') params.set('type', filterType.value);
+            if (sortBy.value === 'votes') params.set('sort', 'votes');
+            if (searchQuery.value.trim()) params.set('search', searchQuery.value.trim());
+            
+            const res = await fetch('/api/cards?' + params.toString());
+            const data = await res.json();
+            cards.value = data.cards || [];
+          } catch (e) {
+            console.error('Failed to load cards:', e);
+          } finally {
+            loading.value = false;
+          }
+        }
+        
+        async function loadCardDetail(cardId) {
+          try {
+            const res = await fetch('/api/cards/' + cardId);
+            const data = await res.json();
+            selectedCard.value = data.card;
+            cardComments.value = data.comments || [];
+            cardLinks.value = data.links || [];
+          } catch (e) {
+            console.error('Failed to load card detail:', e);
+          }
+        }
+        
+        function selectCard(card) {
+          loadCardDetail(card._id);
+          linkMode.value = false;
+          linkTargetId.value = '';
+          linkType.value = '';
+        }
+        
+        function truncate(text, length) {
+          if (!text) return '';
+          return text.length > length ? text.slice(0, length) + '...' : text;
+        }
+        
+        function formatDate(dateStr) {
+          if (!dateStr) return '';
+          const date = new Date(dateStr);
+          return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        
+        function hasVoted(card) {
+          return myVotes.value.includes(card._id);
+        }
+        
+        function isFavorited(cardId) {
+          return favoriteCards.value.includes(cardId);
+        }
+        
+        function toggleFavorite(card) {
+          if (favoriteCards.value.includes(card._id)) {
+            favoriteCards.value = favoriteCards.value.filter(id => id !== card._id);
+          } else {
+            favoriteCards.value.push(card._id);
+          }
+          localStorage.setItem('enbauges_favorite_cards', JSON.stringify(favoriteCards.value));
+        }
+        
+        async function toggleVote(card) {
+          try {
+            const res = await fetch('/api/cards/' + card._id + '/vote', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ voterId: voterId.value })
+            });
+            const data = await res.json();
+            card.votes = data.votes;
+            if (selectedCard.value && selectedCard.value._id === card._id) {
+              selectedCard.value.votes = data.votes;
+            }
+            if (data.voted) {
+              myVotes.value.push(card._id);
+            } else {
+              myVotes.value = myVotes.value.filter(id => id !== card._id);
+            }
+            localStorage.setItem('enbauges_my_votes', JSON.stringify(myVotes.value));
+          } catch (e) {
+            console.error('Failed to vote:', e);
+          }
+        }
+        
+        function clearFilters() {
+          filterType.value = 'all';
+          searchQuery.value = '';
+        }
+        
+        function closeAddModal() {
+          showAddModal.value = false;
+          isEditMode.value = false;
+          editingCardId.value = null;
+          Object.assign(form, { 
+            type: 'actor', 
+            title: '', 
+            description: '', 
+            url: '', 
+            contact: '',
+            address: '',
+            lat: null,
+            lng: null
+          });
+          tagsInput.value = '';
+          formError.value = '';
+        }
+        
+        function startEdit() {
+          if (!selectedCard.value) return;
+          if (!myCards.value.includes(selectedCard.value._id)) {
+            claimingCard.value = selectedCard.value;
+            showClaimModal.value = true;
+            return;
+          }
+          proceedEdit();
+        }
+        
+        function proceedEdit() {
+          if (!claimingCard.value && !selectedCard.value) return;
+          const card = claimingCard.value || selectedCard.value;
+          isEditMode.value = true;
+          editingCardId.value = card._id;
+          Object.assign(form, {
+            type: card.type,
+            title: card.title,
+            description: card.description,
+            url: card.url || '',
+            contact: card.contact || '',
+            address: card.address || '',
+            lat: card.lat || null,
+            lng: card.lng || null
+          });
+          tagsInput.value = (card.tags || []).join(', ');
+          showAddModal.value = true;
+          selectedCard.value = null;
+          claimingCard.value = null;
+          showClaimModal.value = false;
+        }
+        
+        function cancelClaim() {
+          claimingCard.value = null;
+          showClaimModal.value = false;
+        }
+        
+        function onAddressInput() {
+          clearTimeout(addressTimeout);
+          addressTimeout = setTimeout(async () => {
+            if (form.address.length < 3) {
+              addressSuggestions.value = [];
+              return;
+            }
+            try {
+              const res = await fetch(
+                'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(form.address) + '&limit=5&countrycodes=fr',
+                { headers: { 'User-Agent': 'EnBauges/1.0' } }
+              );
+              const data = await res.json();
+              addressSuggestions.value = data;
+            } catch (e) {
+              console.error('Geocode error:', e);
+            }
+          }, 500);
+        }
+        
+        function selectAddress(suggestion) {
+          form.address = suggestion.display_name;
+          form.lat = parseFloat(suggestion.lat);
+          form.lng = parseFloat(suggestion.lon);
+          addressSuggestions.value = [];
+        }
+        
+        function openMapPicker() {
+          console.log('🔍 [DEBUG] openMapPicker called, setting showMapPicker to true');
+          showMapPicker.value = true;
+          console.log('🔍 [DEBUG] showMapPicker after setting:', showMapPicker.value);
+          nextTick(() => {
+            if (!mapPickerInstance) {
+              mapPickerInstance = L.map('map-picker').setView([45.7767, 6.1253], 13);
+              L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+              }).addTo(mapPickerInstance);
+              
+              mapPickerInstance.on('click', async (e) => {
+                const { lat, lng } = e.latlng;
+                if (mapPickerMarker) mapPickerInstance.removeLayer(mapPickerMarker);
+                mapPickerMarker = L.marker([lat, lng]).addTo(mapPickerInstance);
+                form.lat = lat;
+                form.lng = lng;
+                
+                try {
+                  const res = await fetch(
+                    'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&zoom=16&addressdetails=1',
+                    { headers: { 'User-Agent': 'EnBauges/1.0' } }
+                  );
+                  const data = await res.json();
+                  form.address = data.display_name || '';
+                } catch (err) {
+                  console.error('Reverse geocode error:', err);
+                }
+              });
+            } else {
+              mapPickerInstance.invalidateSize();
+              mapPickerInstance.setView([45.7767, 6.1253], 13);
+            }
+          });
+        }
+        
+        function closeMapPicker() {
+          console.log('🔍 [DEBUG] closeMapPicker called, setting showMapPicker to false');
+          showMapPicker.value = false;
+          console.log('🔍 [DEBUG] showMapPicker after setting:', showMapPicker.value);
+        }
+        
+        async function deleteCard() {
+          if (!selectedCard.value) return;
+          if (!confirm('Êtes-vous sûr de vouloir supprimer cette carte ?')) return;
+          
+          deleting.value = true;
+          try {
+            const res = await fetch('/api/cards/' + selectedCard.value._id, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Erreur lors de la suppression');
+            
+            myCards.value = myCards.value.filter(id => id !== selectedCard.value._id);
+            localStorage.setItem('enbauges_my_cards', JSON.stringify(myCards.value));
+            
+            selectedCard.value = null;
+            await loadCards();
+            showToast('Carte supprimée');
+          } catch (e) {
+            showToast(e.message, 'error');
+          } finally {
+            deleting.value = false;
+          }
+        }
+        
+        async function submitCard() {
+          formError.value = '';
+          
+          if (!form.title.trim()) {
+            formError.value = 'Le titre est requis.';
+            return;
+          }
+          if (!form.description.trim()) {
+            formError.value = 'La description est requise.';
+            return;
+          }
+          
+          submitting.value = true;
+          try {
+            const tags = tagsInput.value.split(',').map(t => t.trim()).filter(t => t);
+            
+            const payload = {
+              type: form.type,
+              title: form.title.trim(),
+              description: form.description.trim(),
+              tags,
+              url: form.url.trim() || undefined,
+              contact: form.contact.trim() || undefined,
+              address: form.address.trim() || undefined,
+              lat: form.lat || undefined,
+              lng: form.lng || undefined
+            };
+            
+            let res;
+            if (isEditMode.value && editingCardId.value) {
+              payload.voterId = voterId.value;
+              res = await fetch('/api/cards/' + editingCardId.value, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+            } else {
+              res = await fetch('/api/cards', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+            }
+            
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.error || (isEditMode.value ? 'Erreur lors de la modification' : 'Erreur lors de la création'));
+            }
+            
+            if (!isEditMode.value) {
+              const newCard = await res.json();
+              myCards.value.push(newCard._id);
+              localStorage.setItem('enbauges_my_cards', JSON.stringify(myCards.value));
+            }
+            
+            closeAddModal();
+            await loadCards();
+            showToast(isEditMode.value ? 'Carte modifiée' : 'Carte créée');
+          } catch (e) {
+            formError.value = e.message;
+          } finally {
+            submitting.value = false;
+          }
+        }
+        
+        function startLinkMode() {
+          linkMode.value = true;
+          linkTargetId.value = '';
+          linkType.value = '';
+        }
+        
+        function cancelLinkMode() {
+          linkMode.value = false;
+          linkTargetId.value = '';
+          linkType.value = '';
+        }
+        
+        async function createLink() {
+          if (!linkTargetId.value || !linkType.value) return;
+          
+          try {
+            const res = await fetch('/api/links', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sourceCardId: selectedCard.value._id,
+                targetCardId: linkTargetId.value,
+                relationshipType: linkType.value
+              })
+            });
+            
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.error || 'Erreur lors de la création du lien');
+            }
+            
+            cancelLinkMode();
+            await loadCardDetail(selectedCard.value._id);
+            await loadCards();
+            showToast('Lien créé');
+          } catch (e) {
+            showToast(e.message, 'error');
+          }
+        }
+        
+        function navigateToCard(link) {
+          const cardId = link.sourceCardId._id === selectedCard.value._id 
+            ? link.targetCardId._id 
+            : link.sourceCardId._id;
+          const cardTitle = link.sourceCardId._id === selectedCard.value._id 
+            ? link.targetCardId.title 
+            : link.sourceCardId.title;
+          const cardType = link.sourceCardId._id === selectedCard.value._id 
+            ? link.targetCardId.type 
+            : link.sourceCardId.type;
+          loadCardDetail(cardId);
+        }
+        
+        async function deleteLink(linkId) {
+          if (!confirm('Supprimer ce lien ?')) return;
+          
+          try {
+            const res = await fetch('/api/links/' + linkId, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Erreur');
+            await loadCardDetail(selectedCard.value._id);
+            await loadCards();
+            showToast('Lien supprimé');
+          } catch (e) {
+            showToast('Erreur lors de la suppression', 'error');
+          }
+        }
+        
+        function getRelationLabel(link) {
+          const labels = {
+            'depends_on': 'Dépend de',
+            'reinforces': 'Renforce',
+            'uses': 'Utilise',
+            'inspires': 'Inspire'
+          };
+          return labels[link.relationshipType] || link.relationshipType;
+        }
+        
+        async function submitComment() {
+          if (!newComment.value.trim()) return;
+          
+          try {
+            const res = await fetch('/api/cards/' + selectedCard.value._id + '/comments', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ content: newComment.value.trim() })
+            });
+            
+            if (!res.ok) throw new Error('Erreur');
+            
+            newComment.value = '';
+            await loadCardDetail(selectedCard.value._id);
+            showToast('Commentaire ajouté');
+          } catch (e) {
+            showToast('Erreur lors de l\'ajout du commentaire', 'error');
+          }
+        }
+        
+        let searchTimeout;
+        watch([filterType, sortBy, searchQuery], () => {
+          clearTimeout(searchTimeout);
+          searchTimeout = setTimeout(loadCards, 300);
+        }, { deep: true });
+
+        watch(showMapPicker, (newVal, oldVal) => {
+          console.log('🔍 [DEBUG] showMapPicker changed from', oldVal, 'to', newVal);
+        });
+        
+        function handleKeydown(e) {
+          if (e.key === 'Escape') {
+            if (selectedCard.value) { selectedCard.value = null; return; }
+            if (showAddModal.value) { closeAddModal(); return; }
+            if (showGraphMode.value) closeGraphMode();
+          }
+        }
+        
+        onMounted(() => {
+          console.log('🔍 [DEBUG] App mounted, showMapPicker value:', showMapPicker.value);
+          loadCards();
+          window.addEventListener('keydown', handleKeydown);
+        });
+        
+        return {
+          cards,
+          loading,
+          filterType,
+          sortBy,
+          searchQuery,
+          viewMode,
+          showAddModal,
+          isEditMode,
+          selectedCard,
+          cardComments,
+          cardLinks,
+          linkMode,
+          linkTargetId,
+          linkType,
+          newComment,
+          submitting,
+          formError,
+          deleting,
+          showMyCards,
+          showMyFavorites,
+          showOtherCards,
+          showClaimModal,
+          toggleOtherCards,
+          aboutFolded,
+          toggleAbout,
+          toast,
+          showToast,
+          form,
+          tagsInput,
+          myCards,
+          myVotes,
+          favoriteCards,
+          hasFilters,
+          filteredCards,
+          favoritedCards,
+          otherCards,
+          selectCard,
+          truncate,
+          formatDate,
+          hasVoted,
+          isFavorited,
+          toggleFavorite,
+          toggleVote,
+          clearFilters,
+          closeAddModal,
+          submitCard,
+          startEdit,
+          proceedEdit,
+          cancelClaim,
+          deleteCard,
+          startLinkMode,
+          cancelLinkMode,
+          createLink,
+          deleteLink,
+          navigateToCard,
+          getRelationLabel,
+          submitComment,
+          onAddressInput,
+          selectAddress,
+          showMapPicker,
+          openMapPicker,
+          closeMapPicker,
+          showGraphMode,
+          graphLoading,
+          openGraphMode,
+          closeGraphMode
+        };
+        console.log('🔍 [DEBUG] Returning showMapPicker:', showMapPicker.value);
+      }
+    });
+    
+    app.mount('#app');
+  </script>
+
+  <footer class="enbauges-footer">
+  <div class="enbauges-footer__links">
+    <a href="/agenda" class="enbauges-footer__link">Agenda</a>
+    <span class="enbauges-footer__divider">·</span>
+    <a href="/annuaire" class="enbauges-footer__link">Annuaire</a>
+    <span class="enbauges-footer__divider">·</span>
+    <a href="/donnees-ouvertes" class="enbauges-footer__link">Données ouvertes</a>
+    <span class="enbauges-footer__divider">·</span>
+    <a href="/legal" class="enbauges-footer__link">Mentions légales</a>
+    <span class="enbauges-footer__divider">·</span>
+    <a href="/privacy" class="enbauges-footer__link">Confidentialité</a>
+    <span class="enbauges-footer__divider">·</span>
+    <a href="/cookies" class="enbauges-footer__link">Cookies</a>
+  </div>
+</footer>
+</body>
+</html>

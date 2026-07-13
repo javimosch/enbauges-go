@@ -1,0 +1,631 @@
+:root {
+  --enbauges-terracotta: #C2703A;
+  --enbauges-terracotta-light: #D4895A;
+  --enbauges-sage: #7A9E7E;
+  --enbauges-sage-dark: #5C7E5F;
+  --enbauges-brown: #8B7355;
+  --enbauges-brown-light: #A89076;
+  --enbauges-amber: #D4A03C;
+  --enbauges-amber-light: #E5B85C;
+  --enbauges-cream: #FAF7F2;
+  --enbauges-earth: #3D3229;
+  --enbauges-moss: #4A5D48;
+}
+
+html {
+  --p: 105 25% 40%;
+  --pf: 105 25% 34%;
+  --pc: 60 30% 96%;
+
+  --s: 35 35% 45%;
+  --sf: 35 35% 38%;
+  --sc: 60 30% 96%;
+
+  --a: 42 75% 55%;
+  --af: 42 75% 48%;
+  --ac: 25 30% 15%;
+
+  --b1: 60 30% 96%;
+  --b2: 55 25% 93%;
+  --b3: 45 20% 85%;
+  --bc: 30 15% 18%;
+
+  --n: 30 15% 20%;
+  --nf: 30 15% 15%;
+  --nc: 60 30% 96%;
+
+  --er: 0 65% 55%;
+  --erc: 0 0% 100%;
+
+  --su: 105 25% 40%;
+  --suc: 0 0% 100%;
+
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--enbauges-earth);
+  background: var(--enbauges-cream);
+}
+
+body {
+  min-height: 100vh;
+}
+
+.enbauges-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.enbauges-brand__logo {
+  width: 28px;
+  height: 28px;
+}
+
+.enbauges-main {
+  background: var(--enbauges-cream);
+  min-height: 100vh;
+}
+
+.enbauges-container {
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .enbauges-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+.enbauges-section {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+@media (min-width: 768px) {
+  .enbauges-section {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+}
+
+.enbauges-section-title {
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+  color: var(--enbauges-earth);
+}
+
+@media (min-width: 768px) {
+  .enbauges-section-title {
+    font-size: 2rem;
+    line-height: 2.5rem;
+  }
+}
+
+.enbauges-section-subtitle {
+  margin-top: 0.5rem;
+  color: var(--enbauges-brown);
+}
+
+.enbauges-card {
+  border: 1px solid var(--enbauges-brown-light);
+  border-radius: 1rem;
+  background: white;
+  box-shadow: 0 2px 8px rgba(61, 50, 41, 0.06);
+  overflow: hidden;
+}
+
+.enbauges-card--soft {
+  background: var(--enbauges-cream);
+  border-color: transparent;
+}
+
+.enbauges-card--hover {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  cursor: pointer;
+}
+
+.enbauges-card--hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(61, 50, 41, 0.12);
+}
+
+.enbauges-card--actor {
+  border-left: 4px solid var(--enbauges-terracotta);
+}
+
+.enbauges-card--solution {
+  border-left: 4px solid var(--enbauges-sage);
+}
+
+.enbauges-card--initiative {
+  border-left: 4px solid var(--enbauges-amber);
+}
+
+.enbauges-btn-primary {
+  background: var(--enbauges-sage);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 200ms ease, transform 150ms ease;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.enbauges-btn-primary:hover {
+  background: var(--enbauges-sage-dark);
+}
+
+.enbauges-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.enbauges-btn-secondary {
+  background: var(--enbauges-cream);
+  color: var(--enbauges-earth);
+  border: 2px solid var(--enbauges-brown-light);
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 200ms ease, border-color 200ms ease;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.enbauges-btn-secondary:hover {
+  background: var(--enbauges-cream);
+  border-color: var(--enbauges-brown);
+}
+
+.enbauges-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--enbauges-brown-light);
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  background: white;
+  color: var(--enbauges-earth);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+  min-height: 44px;
+}
+
+.enbauges-input:focus {
+  outline: none;
+  border-color: var(--enbauges-sage);
+  box-shadow: 0 0 0 3px rgba(122, 158, 126, 0.2);
+}
+
+.enbauges-input::placeholder {
+  color: var(--enbauges-brown);
+  opacity: 0.7;
+}
+
+.enbauges-badge-actor {
+  background: var(--enbauges-terracotta);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.enbauges-badge-solution {
+  background: var(--enbauges-sage);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.enbauges-badge-initiative {
+  background: var(--enbauges-amber);
+  color: var(--enbauges-earth);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.enbauges-tag {
+  background: var(--enbauges-cream);
+  color: var(--enbauges-brown);
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  border: 1px solid var(--enbauges-brown-light);
+}
+
+.enbauges-navbar {
+  background: white;
+  border-bottom: 1px solid var(--enbauges-brown-light);
+}
+
+.enbauges-filter-bar {
+  background: white;
+  border: 1px solid var(--enbauges-brown-light);
+  border-radius: 1rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.enbauges-filter-toggle {
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 200ms ease;
+  min-height: 40px;
+}
+
+.enbauges-filter-toggle:hover {
+  background: var(--enbauges-cream);
+}
+
+.enbauges-filter-toggle--active {
+  background: var(--enbauges-sage);
+  color: white;
+}
+
+.enbauges-filter-toggle--actor.active {
+  background: var(--enbauges-terracotta);
+}
+
+.enbauges-filter-toggle--solution.active {
+  background: var(--enbauges-sage);
+}
+
+.enbauges-filter-toggle--initiative.active {
+  background: var(--enbauges-amber);
+  color: var(--enbauges-earth);
+}
+
+.enbauges-empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.enbauges-empty-state__icon {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 2rem;
+  opacity: 0.6;
+}
+
+.enbauges-empty-state__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--enbauges-earth);
+  margin-bottom: 0.5rem;
+}
+
+.enbauges-empty-state__text {
+  color: var(--enbauges-brown);
+  max-width: 28rem;
+  margin: 0 auto 2rem;
+}
+
+.enbauges-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(61, 50, 41, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.enbauges-modal {
+  background: white;
+  border-radius: 1.25rem;
+  width: 100%;
+  max-width: 42rem;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(61, 50, 41, 0.2);
+}
+
+.enbauges-modal__header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--enbauges-brown-light);
+}
+
+.enbauges-modal__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--enbauges-earth);
+}
+
+.enbauges-modal__body {
+  padding: 1.5rem;
+}
+
+.enbauges-modal__footer {
+  padding: 1.5rem;
+  border-top: 1px solid var(--enbauges-brown-light);
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.enbauges-vote-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border: 2px solid var(--enbauges-brown-light);
+  background: white;
+  color: var(--enbauges-brown);
+  cursor: pointer;
+  transition: all 200ms ease;
+  min-height: 40px;
+}
+
+.enbauges-vote-btn:hover {
+  border-color: var(--enbauges-amber);
+  color: var(--enbauges-amber);
+}
+
+.enbauges-vote-btn--voted {
+  background: var(--enbauges-amber);
+  border-color: var(--enbauges-amber);
+  color: var(--enbauges-earth);
+}
+
+.enbauges-vote-btn--voted:hover {
+  background: var(--enbauges-amber-light);
+  border-color: var(--enbauges-amber-light);
+}
+
+.enbauges-comment {
+  padding: 1rem;
+  border-bottom: 1px solid var(--enbauges-cream);
+}
+
+.enbauges-comment:last-child {
+  border-bottom: none;
+}
+
+.enbauges-comment__meta {
+  font-size: 0.75rem;
+  color: var(--enbauges-brown);
+  margin-bottom: 0.25rem;
+}
+
+.enbauges-comment__text {
+  color: var(--enbauges-earth);
+}
+
+.enbauges-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  background: var(--enbauges-cream);
+  color: var(--enbauges-brown);
+  border: 1px solid var(--enbauges-brown-light);
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.enbauges-link:hover {
+  background: var(--enbauges-sage);
+  color: white;
+  border-color: var(--enbauges-sage);
+}
+
+.enbauges-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .enbauges-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .enbauges-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.enbauges-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.enbauges-sample-card {
+  position: relative;
+  opacity: 0.7;
+  border-style: dashed;
+}
+
+.enbauges-sample-card::after {
+  content: 'Exemple';
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--enbauges-brown);
+  color: white;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enbauges-card--hover,
+  .enbauges-btn-primary,
+  .enbauges-btn-secondary,
+  .enbauges-vote-btn,
+  .enbauges-link,
+  .enbauges-input,
+  .enbauges-modal {
+    transition: none;
+  }
+}
+
+:focus-visible {
+  outline: 3px solid var(--enbauges-sage);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--enbauges-sage);
+  color: white;
+}
+
+.enbauges-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  padding: 1rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(61, 50, 41, 0.2);
+  animation: toast-in 300ms ease;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.enbauges-toast--success {
+  background: var(--enbauges-sage);
+  color: white;
+}
+
+.enbauges-toast--error {
+  background: #DC2626;
+  color: white;
+}
+
+.enbauges-toast--info {
+  background: var(--enbauges-amber);
+  color: var(--enbauges-earth);
+}
+
+@media (max-width: 640px) {
+  .enbauges-toast {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+  }
+  
+  .enbauges-filter-bar {
+    padding: 0.75rem;
+  }
+  
+  .enbauges-filter-bar > div:first-child {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .enbauges-filter-bar > div:first-child > div:first-child {
+    justify-content: flex-start;
+  }
+  
+  .enbauges-filter-bar > div:last-child {
+    margin-top: 0.75rem;
+  }
+  
+  .enbauges-modal {
+    max-width: 100%;
+    margin: 0.5rem;
+  }
+}
+
+.enbauges-hero {
+  transition: all 200ms ease;
+}
+
+.enbauges-hero a {
+  text-decoration: underline;
+}
+
+.enbauges-hero a:hover {
+  opacity: 0.8;
+}
+
+.enbauges-featured-card {
+  background: white;
+  border: 2px solid var(--enbauges-sage);
+  border-radius: 1rem;
+  transition: all 200ms ease;
+}
+
+.enbauges-featured-card:hover {
+  border-color: var(--enbauges-sage-dark);
+  box-shadow: 0 4px 12px rgba(122, 158, 126, 0.25);
+  transform: translateY(-1px);
+}
+
+.enbauges-footer {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  border-top: 1px solid var(--enbauges-cream);
+  margin-top: 2rem;
+}
+
+.enbauges-footer__links {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.enbauges-footer__link {
+  color: var(--enbauges-brown);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.enbauges-footer__link:hover {
+  color: var(--enbauges-sage);
+  text-decoration: underline;
+}
+
+.enbauges-footer__divider {
+  color: var(--enbauges-brown-light);
+  font-size: 0.75rem;
+}

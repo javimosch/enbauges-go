@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda - Enbauges</title>
+  <meta name="description" content="L'agenda public du Cœur des Bauges : marchés, ateliers, événements des associations du territoire. Sans compte, sans inscription.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css">
+  <link href="/css/enbauges.css" rel="stylesheet">
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      .enbauges-footer { display: none !important; }
+      body { background: white; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="enbauges-navbar no-print">
+    <div class="enbauges-container">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 0;">
+        <a href="/" class="enbauges-brand" style="text-decoration: none;">
+          <svg class="enbauges-brand__logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="16" cy="16" r="14" fill="#7A9E7E"/>
+            <path d="M16 8C12 8 8 12 8 16C8 20 12 24 16 24C20 24 24 20 24 16" stroke="#FAF7F2" stroke-width="2" stroke-linecap="round"/>
+            <path d="M16 8C20 8 24 12 24 16C24 20 20 24 16 24" stroke="#D4A03C" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="3" fill="#FAF7F2"/>
+          </svg>
+          <span style="font-weight: 700; font-size: 1.125rem; color: var(--enbauges-earth);">Enbauges</span>
+        </a>
+        <div style="display: flex; gap: 0.75rem;">
+          <a href="/api/export/events.ics" class="enbauges-btn-secondary" style="text-decoration: none;">📅 S'abonner (.ics)</a>
+          <button class="enbauges-btn-secondary" onclick="window.print()">🖨 Imprimer</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="enbauges-container" style="padding: 2rem 1rem; max-width: 48rem; margin: 0 auto;">
+    <h1 style="font-size: 1.875rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--enbauges-earth);">Agenda du territoire</h1>
+    <p style="color: var(--enbauges-brown); line-height: 1.6; margin-bottom: 2rem;">
+      Les événements publics du Cœur des Bauges, proposés par les associations et collectifs du territoire.
+      Visible par tout le monde, sans compte.
+    </p>
+
+    {{if not .Months}}
+      <div style="text-align: center; padding: 3rem 1rem; background: var(--enbauges-cream); border-radius: 0.75rem;">
+        <p style="color: var(--enbauges-brown); margin-bottom: 1rem;">Aucun événement à venir pour le moment.</p>
+        <p style="font-size: 0.875rem; color: var(--enbauges-brown);">
+          Votre association organise quelque chose ? Proposez-le ci-dessous — pas besoin de compte.
+        </p>
+      </div>
+    {{end}}
+
+    {{range .Months}}
+      <h2 style="font-size: 1.25rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--enbauges-sage); text-transform: capitalize;">{{.Label}}</h2>
+      <div style="display: grid; gap: 0.75rem;">
+        {{range .Events}}
+          <div style="display: flex; gap: 1rem; background: white; border: 1px solid var(--enbauges-cream); border-radius: 0.75rem; padding: 1rem;">
+            <div style="flex-shrink: 0; width: 3.5rem; text-align: center; background: var(--enbauges-cream); border-radius: 0.5rem; padding: 0.5rem 0.25rem; align-self: flex-start;">
+              <div style="font-size: 1.375rem; font-weight: 700; color: var(--enbauges-earth); line-height: 1.1;">{{.Day}}</div>
+              <div style="font-size: 0.6875rem; color: var(--enbauges-brown); text-transform: uppercase;">{{.Weekday}}</div>
+            </div>
+            <div style="min-width: 0;">
+              <div style="font-weight: 600; color: var(--enbauges-earth);">{{.Title}}</div>
+              <div style="font-size: 0.8125rem; color: var(--enbauges-brown); margin-top: 0.125rem;">
+                {{.Time}}{{if .Location}} · 📍 {{.Location}}{{end}}{{if .OrgName}} · {{.OrgName}}{{end}}
+              </div>
+              {{if .Description}}
+                <div style="font-size: 0.875rem; color: var(--enbauges-brown); margin-top: 0.375rem; line-height: 1.5;">{{.Description}}</div>
+              {{end}}
+              {{if .Category}}
+                <span class="enbauges-tag" style="margin-top: 0.375rem; display: inline-block;">{{.Category}}</span>
+              {{end}}
+            </div>
+          </div>
+        {{end}}
+      </div>
+    {{end}}
+
+    <details class="no-print" style="margin-top: 2.5rem; background: var(--enbauges-cream); border-radius: 0.75rem; padding: 1rem 1.25rem;">
+      <summary style="font-weight: 600; color: var(--enbauges-earth); cursor: pointer;">+ Proposer un événement</summary>
+      <form id="propose-form" style="display: grid; gap: 0.75rem; margin-top: 1rem;">
+        <input name="title" class="enbauges-input" placeholder="Titre de l'événement *" required maxlength="200">
+        <textarea name="description" class="enbauges-input" rows="2" placeholder="Description (optionnel)" maxlength="2000" style="resize: vertical;"></textarea>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <label style="font-size: 0.8125rem; color: var(--enbauges-brown);">Début *<input name="startAt" type="datetime-local" class="enbauges-input" required></label>
+          <label style="font-size: 0.8125rem; color: var(--enbauges-brown);">Fin *<input name="endAt" type="datetime-local" class="enbauges-input" required></label>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <input name="location" class="enbauges-input" placeholder="Lieu">
+          <input name="category" class="enbauges-input" placeholder="Catégorie (marché, atelier…)">
+        </div>
+        <input name="contactEmail" type="email" class="enbauges-input" placeholder="Votre email (pour vous prévenir, jamais publié)">
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+          <button type="submit" class="enbauges-btn-primary">Proposer</button>
+          <span id="propose-status" style="font-size: 0.875rem; color: var(--enbauges-sage);"></span>
+        </div>
+        <p style="font-size: 0.75rem; color: var(--enbauges-brown); margin: 0;">
+          L'événement sera visible après validation par l'équipe — généralement sous 48 h.
+        </p>
+      </form>
+    </details>
+    <script>
+      document.getElementById('propose-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const f = e.target;
+        const status = document.getElementById('propose-status');
+        const toISO = v => v ? new Date(v).toISOString() : '';
+        try {
+          const res = await fetch('/api/events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: f.title.value.trim(),
+              description: f.description.value.trim(),
+              startAt: toISO(f.startAt.value),
+              endAt: toISO(f.endAt.value),
+              location: f.location.value.trim(),
+              category: f.category.value.trim(),
+              contactEmail: f.contactEmail.value.trim()
+            })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Erreur');
+          status.textContent = '✓ ' + data.message;
+          f.reset();
+        } catch (err) {
+          status.style.color = '#DC2626';
+          status.textContent = err.message;
+        }
+      });
+    </script>
+
+    <div class="no-print" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--enbauges-cream); font-size: 0.875rem; color: var(--enbauges-brown); line-height: 1.7;">
+      <p>
+        📅 <a href="/api/export/events.ics" style="color: var(--enbauges-sage);">Abonnez votre calendrier</a> (Thunderbird, Google Agenda, iPhone…)
+        et l'agenda se met à jour tout seul. Données aussi disponibles en
+        <a href="/donnees-ouvertes" style="color: var(--enbauges-sage);">formats ouverts</a>.
+      </p>
+      <p style="margin-top: 0.75rem;"><a href="/" style="color: var(--enbauges-sage); font-weight: 500;">← Retour au canvas</a></p>
+    </div>
+  </div>
+  <footer class="enbauges-footer">
+  <div class="enbauges-footer__links">
+    <a href="/agenda" class="enbauges-footer__link">Agenda</a>
+    <span class="enbauges-footer__divider">·</span>
+    <a href="/annuaire" class="enbauges-footer__link">Annuaire</a>
+    <span class="enbauges-footer__divider">·</span>
+    <a href="/donnees-ouvertes" class="enbauges-footer__link">Données ouvertes</a>
+    <span class="enbauges-footer__divider">·</span>
+    <a href="/legal" class="enbauges-footer__link">Mentions légales</a>
+    <span class="enbauges-footer__divider">·</span>
+    <a href="/privacy" class="enbauges-footer__link">Confidentialité</a>
+    <span class="enbauges-footer__divider">·</span>
+    <a href="/cookies" class="enbauges-footer__link">Cookies</a>
+  </div>
+</footer>
+</body>
+</html>

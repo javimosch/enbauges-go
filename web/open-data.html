@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Données ouvertes - Enbauges</title>
+  <meta name="description" content="Les données du territoire du Cœur des Bauges en formats ouverts : JSON, CSV, GeoJSON, iCal. Réutilisation libre.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css">
+  <link href="/css/enbauges.css" rel="stylesheet">
+</head>
+<body>
+  <div class="enbauges-container" style="padding: 2rem 1rem; max-width: 48rem; margin: 0 auto;">
+    <h1 style="font-size: 1.875rem; font-weight: 700; margin-bottom: 1rem; color: var(--enbauges-earth);">Données ouvertes</h1>
+
+    <p style="color: var(--enbauges-brown); line-height: 1.6; margin-bottom: 2rem;">
+      Les données d'EnBauges appartiennent au territoire, pas à la plateforme.
+      Tout est téléchargeable en formats ouverts et réutilisable librement — pour un mémoire,
+      une autre carte, un bulletin municipal, ou l'instance d'une autre vallée.
+    </p>
+
+    <div style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--enbauges-sage);">Les cartes du territoire</h2>
+      <ul style="color: var(--enbauges-brown); line-height: 2; padding-left: 1.25rem;">
+        <li><a href="/api/export/cards.json" style="color: var(--enbauges-sage); font-weight: 500;">cards.json</a> — acteurs, solutions et initiatives, avec les liens entre eux</li>
+        <li><a href="/api/export/cards.csv" style="color: var(--enbauges-sage); font-weight: 500;">cards.csv</a> — la même chose à plat, pour tableur (LibreOffice, Excel)</li>
+        <li><a href="/api/export/cards.geojson" style="color: var(--enbauges-sage); font-weight: 500;">cards.geojson</a> — les cartes géolocalisées, pour QGIS, uMap, Leaflet…</li>
+      </ul>
+    </div>
+
+    <div style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--enbauges-sage);">L'agenda public</h2>
+      <ul style="color: var(--enbauges-brown); line-height: 2; padding-left: 1.25rem;">
+        <li><a href="/api/export/events.json" style="color: var(--enbauges-sage); font-weight: 500;">events.json</a> — les événements publics approuvés</li>
+        <li><a href="/api/export/events.ics" style="color: var(--enbauges-sage); font-weight: 500;">events.ics</a> — abonnez votre calendrier (Thunderbird, Google Agenda, iPhone…) et l'agenda du territoire se met à jour tout seul</li>
+      </ul>
+    </div>
+
+    <div style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--enbauges-sage);">Licence</h2>
+      <p style="color: var(--enbauges-brown); line-height: 1.6;">
+        Ces données sont publiées sous
+        <a href="https://www.etalab.gouv.fr/licence-ouverte-open-licence" target="_blank" rel="noopener" style="color: var(--enbauges-sage);">Licence Ouverte 2.0 (Etalab)</a> :
+        réutilisation libre, y compris commerciale, à condition de mentionner la source (« enbauges.fr »).
+      </p>
+    </div>
+
+    <div style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--enbauges-sage);">Pour les développeurs</h2>
+      <p style="color: var(--enbauges-brown); line-height: 1.6;">
+        L'index machine des exports est disponible sur
+        <a href="/api/export" style="color: var(--enbauges-sage);"><code>/api/export</code></a>.
+        Les URLs sont stables et peuvent être appelées régulièrement (soyez raisonnables).
+      </p>
+    </div>
+
+    <div style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--enbauges-cream);">
+      <a href="/" style="color: var(--enbauges-sage); font-weight: 500;">← Retour au canvas</a>
+    </div>
+  </div>
+</body>
+</html>
