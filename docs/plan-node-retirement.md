@@ -1,5 +1,11 @@
 # Plan : retrait complet de Node.js (zéro plugin proxy)
 
+> **✅ TERMINÉ le 2026-07-13.** Node est arrêté en prod ; enbauges.fr est servi
+> à 100 % par enbauges-go. `anomalies-map` n'a **pas** été porté : décision
+> produit de l'abandonner (la brique assets T1 devient sans objet). Les
+> collections Mongo `anomalies`/`assets` restent en base, intactes mais sans
+> interface. Le dépôt Node est archivé en lecture seule.
+
 Objectif : migrer les 7 mini-apps restantes en plugins Go compilés, puis
 éteindre le processus Node. Fin de partie : un seul binaire, un seul service
 systemd, `PLUGIN_PROXY` vide.
@@ -79,8 +85,8 @@ vérif bidirectionnelle passée, commit.
     sha256 créés par une app s'authentifient dans l'autre. Règles préservées :
     1re commune auto-activée = admin, superadmin Basic auth, soft-delete des
     annonces, filtre d'expiration, populate des refs commune.
-- **Vague 4 — le dépendant** : `anomalies-map` (T1 requis).
-  Dernier car il impose la brique assets.
+- **Vague 4 — le dépendant** : `anomalies-map`. ✖ Abandonné (décision produit
+  du 2026-07-13) — non porté, T1 sans objet.
 
 ## Retrait de Node (après vague 4)
 

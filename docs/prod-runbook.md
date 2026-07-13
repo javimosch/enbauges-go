@@ -9,9 +9,9 @@
 - **Overlay UI** : `/apps/enbauges-go/web` et `/apps/enbauges-go/plugins/<id>/web`
   montés dans le conteneur — un `./deploy.sh ui` suffit pour un changement d'UI
   (aucun restart, cache-busting automatique).
-- **Node (standby)** : `enbauges_platform` reste up. Il sert encore
-  `/anomalies`, `/carte-anomalies` et `/public/assets` via `PLUGIN_PROXY`
-  (dernier mini-app non migré + photos S3).
+- **Node : décommissionné le 2026-07-13.** Conteneur arrêté et retiré ;
+  `anomalies-map` abandonné (décision produit), `PLUGIN_PROXY` vide.
+  Les fichiers restent dans `/apps/enbauges_platform` (archive froide).
 - **Mongo** : inchangé (mongo prod :27019) — les deux apps lisent/écrivent la même base.
 - **ADMIN_TOKEN** (modération agenda) : dans `/apps/enbauges-go/.env` sur vps1.
 
@@ -26,16 +26,12 @@ ssh vps1 'cd /apps/enbauges-go && docker compose pull -q && docker compose up -d
 ./deploy.sh ui
 ```
 
-## Rollback (< 30 s)
+## Rollback d'urgence (Node est arrêté, plus chaud)
 
 ```bash
+# 1. Relancer Node (fichiers toujours sur place) :
+ssh vps1 'cd /apps/enbauges_platform && docker compose -f compose.vps1.yml up -d'
+# 2. Repointer Traefik :
 ssh vps1 'cp /data/coolify/proxy/dynamic-backup-enbauges_platform.yml.pre-go \
   /data/coolify/proxy/dynamic/enbauges_platform.yml'
-# Traefik recharge à chaud → enbauges.fr repointe sur le Node intact.
 ```
-
-## Décommission de Node (après ~1 semaine d'observation)
-
-Bloqué par la migration d'`anomalies-map` (brique assets T1, voir
-plan-node-retirement.md). Ensuite : retirer `PLUGIN_PROXY` du `.env`,
-`docker compose up -d`, stopper `enbauges_platform`, archiver le dépôt Node.
