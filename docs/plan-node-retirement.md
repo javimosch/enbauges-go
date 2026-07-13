@@ -56,9 +56,10 @@ superbackend → S3, avec un doc dans la collection `assets` et une URL publique
 Chaque vague se termine par : registre mis à jour, entrée proxy retirée,
 vérif bidirectionnelle passée, commit.
 
-- **Vague 1 — les simples** : `lost-items`, `carpool`.
-  Deux CRUD à 4 routes, un modèle chacun, mêmes patterns que `calendar`.
-  Objectif : consolider le rythme et le gabarit de port.
+- **Vague 1 — les simples** : `lost-items`, `carpool`. ✔ (2026-07-13)
+  Portés, compatibilité bidirectionnelle vérifiée avec les plugins Node sur
+  `lostitems` et `carpoolentries`. Helpers `ServeWebFile`/`DBCtx` ajoutés au
+  package `plugin` au passage.
 - **Vague 2 — les moyens** : `irc-chat`, `interactive-map`.
   Chat : 2 modèles + polling (rien de spécial côté serveur). Carte : CRUD
   marqueurs géolocalisés.

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Covoiturage - Enbauges</title>
+  <meta name="description" content="Proposez ou recherchez des covoiturages quotidiens dans le Massif des Bauges">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css">
+  <link href="/css/enbauges.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div v-if="toast.show" class="enbauges-toast" :class="'enbauges-toast--' + toast.type">
+      {{ toast.message }}
+    </div>
+
+    <nav class="enbauges-navbar">
+      <div class="enbauges-container">
+        <div class="navbar-content" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 0;">
+          <a href="/" class="enbauges-brand" style="text-decoration: none; cursor: pointer;">
+            <svg class="enbauges-brand__logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="16" cy="16" r="14" fill="#7A9E7E"/>
+              <path d="M16 8C12 8 8 12 8 16C8 20 12 24 16 24C20 24 24 20 24 16" stroke="#FAF7F2" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16 8C20 8 24 12 24 16C24 20 20 24 16 24" stroke="#D4A03C" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="16" cy="16" r="3" fill="#FAF7F2"/>
+            </svg>
+            <span style="font-weight: 700; font-size: 1.125rem; color: var(--enbauges-earth);">Enbauges</span>
+          </a>
+          <div style="display: flex; gap: 0.75rem;">
+            <a href="/" class="enbauges-btn-secondary" style="text-decoration: none;">
+              ← Canvas
+            </a>
+            <button class="enbauges-btn-primary" @click="showAddModal = true">
+              + Proposer / Rechercher
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="enbauges-main">
+      <div class="enbauges-container" style="padding-top: 2rem; padding-bottom: 2rem;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+          <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--enbauges-earth); margin-bottom: 0.5rem;">
+            Covoiturage Quotidien
+          </h1>
+          <p style="color: var(--enbauges-brown); max-width: 500px; margin: 0 auto;">
+            Proposez vos trajets ou recherchez un covoiturage pour vos deplacements quotidiens.
+          </p>
+        </div>
+
+        <div v-if="loading" style="text-align: center; padding: 4rem;">
+          <div style="color: var(--enbauges-sage); font-weight: 500;">Chargement...</div>
+        </div>
+
+        <div v-else-if="entries.length === 0" class="enbauges-empty-state">
+          <svg class="enbauges-empty-state__icon" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="60" cy="60" r="50" fill="#7A9E7E" opacity="0.2"/>
+            <path d="M40 55h40M40 70h25" stroke="#7A9E7E" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="35" cy="75" r="8" stroke="#7A9E7E" stroke-width="3" fill="none"/>
+            <circle cx="85" cy="75" r="8" stroke="#7A9E7E" stroke-width="3" fill="none"/>
+          </svg>
+          <h2 class="enbauges-empty-state__title">Aucun covoiturage</h2>
+          <p class="enbauges-empty-state__text">
+            Soyez le premier a proposer un trajet ou rechercher un covoiturage!
+          </p>
+          <button class="enbauges-btn-primary" @click="showAddModal = true">
+            + Proposer / Rechercher
+          </button>
+        </div>
+
+        <div v-else class="enbauges-grid">
+          <div 
+            v-for="entry in entries" 
+            :key="entry._id"
+            class="enbauges-card"
+            :class="entry.type === 'offer' ? 'enbauges-card--solution' : 'enbauges-card--actor'"
+          >
+            <div style="padding: 1.25rem;">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem;">
+                <span :class="entry.type === 'offer' ? 'enbauges-badge-solution' : 'enbauges-badge-actor'">
+                  {{ entry.type === 'offer' ? 'Offre' : 'Recherche' }}
+                </span>
+                <button 
+                  @click="deleteEntry(entry)"
+                  style="background: none; border: none; cursor: pointer; color: var(--enbauges-brown); padding: 0.25rem;"
+                  title="Supprimer"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M4 4l8 8M4 12l8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
+              
+              <h3 style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.75rem; font-size: 1.0625rem;">
+                {{ entry.title }}
+              </h3>
+              
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="var(--enbauges-sage)">
+                  <circle cx="8" cy="8" r="3"/>
+                  <path d="M8 2v2M8 12v2M2 8h2M12 8h2" stroke="var(--enbauges-sage)" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <span style="color: var(--enbauges-brown); font-size: 0.9375rem;">
+                  {{ entry.origin }}
+                </span>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="var(--enbauges-terracotta)">
+                  <path d="M8 2l6 4v6l-6 2-6-2V6l6-4z"/>
+                </svg>
+                <span style="color: var(--enbauges-brown); font-size: 0.9375rem;">
+                  {{ entry.destination }}
+                </span>
+              </div>
+              
+              <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.8125rem; color: var(--enbauges-brown); margin-bottom: 0.75rem; align-items: center;">
+                <span style="display: flex; align-items: center; gap: 0.25rem;">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                    <rect x="1" y="2" width="12" height="11" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                    <path d="M1 5h12M4 1v2M10 1v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                  {{ entry.frequency === 'weekdays' ? 'Jours fixes' : formatDate(entry.date) }}
+                </span>
+                <span v-if="entry.frequency === 'weekdays' && entry.weekdays && entry.weekdays.length > 0" style="display: inline-flex; align-items: center; gap: 0.25rem; background: var(--enbauges-cream); padding: 0.125rem 0.5rem; border-radius: 1rem; font-size: 0.75rem;">
+                  {{ formatWeekdays(entry.weekdays) }}
+                </span>
+                <span v-if="entry.time" style="display: flex; align-items: center; gap: 0.25rem;">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                    <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                    <path d="M7 4v3.5l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                  {{ entry.time }}
+                </span>
+                <span v-if="entry.seats" style="display: flex; align-items: center; gap: 0.25rem;">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                    <circle cx="5" cy="9" r="2"/>
+                    <circle cx="9" cy="9" r="2"/>
+                    <path d="M1 9h12M1 6h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                  {{ entry.seats }} place{{ entry.seats > 1 ? 's' : '' }}
+                </span>
+                <span v-if="entry.luggage && entry.luggage !== 'none'" style="display: flex; align-items: center; gap: 0.25rem;">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                    <rect x="3" y="4" width="8" height="7" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                    <path d="M5 4V3a2 2 0 014 0v1" stroke="currentColor" stroke-width="1.5"/>
+                  </svg>
+                  {{ entry.luggage === '23kg' ? '23kg' : entry.luggage === '10kg_or_less' ? '< 10kg' : 'Petits sacs' }}
+                </span>
+              </div>
+              
+              <div v-if="entry.description" style="font-size: 0.875rem; color: var(--enbauges-brown); margin-bottom: 0.75rem; line-height: 1.5;">
+                {{ entry.description }}
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: var(--enbauges-cream); border-radius: 0.5rem; margin-bottom: 0.5rem;">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="var(--enbauges-brown)">
+                  <rect x="1" y="3" width="14" height="10" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                  <path d="M1 6l7 4 7-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <span style="font-size: 0.875rem; color: var(--enbauges-earth);">{{ entry.contact }}</span>
+              </div>
+              
+              <div style="font-size: 0.75rem; color: var(--enbauges-brown-light);">
+                Cree le {{ formatDate(entry.createdAt) }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div v-if="showAddModal" class="enbauges-modal-backdrop" @click.self="closeAddModal">
+      <div class="enbauges-modal" style="max-width: 28rem;">
+        <div class="enbauges-modal__header">
+          <h2 class="enbauges-modal__title">Proposer / Rechercher</h2>
+        </div>
+        <div class="enbauges-modal__body">
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Type *
+            </label>
+            <div style="display: flex; gap: 0.5rem;">
+              <button 
+                class="enbauges-filter-toggle enbauges-filter-toggle--solution"
+                :class="{ 'enbauges-filter-toggle--active': form.type === 'offer' }"
+                style="flex: 1;"
+                @click="form.type = 'offer'"
+              >
+                Offre
+              </button>
+              <button 
+                class="enbauges-filter-toggle enbauges-filter-toggle--actor"
+                :class="{ 'enbauges-filter-toggle--active': form.type === 'request' }"
+                style="flex: 1;"
+                @click="form.type = 'request'"
+              >
+                Recherche
+              </button>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Titre *
+            </label>
+            <input 
+              v-model="form.title" 
+              type="text" 
+              class="enbauges-input" 
+              :placeholder="form.type === 'offer' ? 'Conducteur vers Chambéry...' : 'Passager recherche covoiturage...'"
+              maxlength="200"
+            >
+            <div style="font-size: 0.75rem; color: var(--enbauges-brown); margin-top: 0.25rem; text-align: right;">
+              {{ form.title.length }}/200
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Depart *
+            </label>
+            <input 
+              v-model="form.origin" 
+              type="text" 
+              class="enbauges-input" 
+              placeholder="Lieu de depart"
+              maxlength="300"
+            >
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Destination *
+            </label>
+            <input 
+              v-model="form.destination" 
+              type="text" 
+              class="enbauges-input" 
+              placeholder="Lieu d'arrivee"
+              maxlength="300"
+            >
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+            <div>
+              <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+                Date *
+              </label>
+              <input 
+                v-model="form.date" 
+                type="date" 
+                class="enbauges-input"
+              >
+            </div>
+            <div>
+              <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+                Heure
+              </label>
+              <input 
+                v-model="form.time" 
+                type="time" 
+                class="enbauges-input"
+              >
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Recurrence
+            </label>
+            <div style="display: flex; gap: 0.5rem;">
+              <button 
+                class="enbauges-filter-toggle"
+                :class="{ 'enbauges-filter-toggle--active': form.frequency === 'one-time' }"
+                style="flex: 1;"
+                @click="form.frequency = 'one-time'"
+                type="button"
+              >
+                Trajet unique
+              </button>
+              <button 
+                class="enbauges-filter-toggle"
+                :class="{ 'enbauges-filter-toggle--active': form.frequency === 'weekdays' }"
+                style="flex: 1;"
+                @click="form.frequency = 'weekdays'"
+                type="button"
+              >
+                Jours fixes
+              </button>
+            </div>
+          </div>
+
+          <div v-if="form.frequency === 'weekdays'" style="margin-bottom: 1.25rem; padding: 1rem; background: var(--enbauges-cream); border-radius: 0.5rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Jours de la semaine
+            </label>
+            <div style="display: flex; gap: 0.375rem; flex-wrap: wrap;">
+              <button 
+                v-for="(day, index) in ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']"
+                :key="index"
+                type="button"
+                class="enbauges-filter-toggle"
+                :class="{ 'enbauges-filter-toggle--active': form.weekdays.includes(index) }"
+                @click="toggleWeekday(index)"
+                style="min-width: 2.5rem; padding: 0.375rem 0.5rem;"
+              >
+                {{ day }}
+              </button>
+            </div>
+            <div style="margin-top: 0.75rem;">
+              <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth); font-size: 0.875rem;">
+                Jours exclus (vacances, feries...)
+              </label>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                <input 
+                  v-model="exceptionDate" 
+                  type="date" 
+                  class="enbauges-input"
+                  style="flex: 1; min-width: 120px;"
+                >
+                <button 
+                  class="enbauges-btn-secondary"
+                  type="button"
+                  @click="addException"
+                  :disabled="!exceptionDate"
+                  style="padding: 0.375rem 0.75rem;"
+                >
+                  Ajouter
+                </button>
+              </div>
+              <div v-if="form.exceptions.length > 0" style="margin-top: 0.5rem; display: flex; gap: 0.375rem; flex-wrap: wrap;">
+                <span 
+                  v-for="(exc, idx) in form.exceptions" 
+                  :key="idx"
+                  style="display: inline-flex; align-items: center; gap: 0.25rem; background: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.8125rem;"
+                >
+                  {{ formatDateShort(exc) }}
+                  <button type="button" @click="removeException(idx)" style="background: none; border: none; cursor: pointer; color: var(--enbauges-brown); padding: 0;">
+                    <svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 3l6 6M3 9l6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="form.type === 'offer'" style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Nombre de places
+            </label>
+            <select v-model="form.seats" class="enbauges-input">
+              <option :value="null">Non specifie</option>
+              <option value="1">1 place</option>
+              <option value="2">2 places</option>
+              <option value="3">3 places</option>
+              <option value="4">4 places</option>
+            </select>
+          </div>
+
+          <div v-if="form.type === 'request'" style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Bagage
+            </label>
+            <select v-model="form.luggage" class="enbauges-input">
+              <option value="none">Aucun sac</option>
+              <option value="10kg_or_less">Petit bagage (&lt; 10kg)</option>
+              <option value="23kg">Gros bagage (23kg)</option>
+              <option value="small_backpacks">Petits sacs a dos</option>
+            </select>
+            <div style="font-size: 0.75rem; color: var(--enbauges-brown); margin-top: 0.25rem;">
+              Conseils : les petits sacs (10kg ou moins) n'ont pas besoin d'etre declares.
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Contact *
+            </label>
+            <input 
+              v-model="form.contact" 
+              type="text" 
+              class="enbauges-input" 
+              placeholder="Email ou telephone"
+              maxlength="200"
+            >
+          </div>
+
+          <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Details
+            </label>
+            <textarea 
+              v-model="form.description" 
+              class="enbauges-input" 
+              rows="2"
+              placeholder="Informations supplementaires..."
+              maxlength="1000"
+              style="resize: vertical;"
+            ></textarea>
+          </div>
+
+          <div v-if="formError" style="color: #dc2626; font-size: 0.875rem; margin-bottom: 1rem;">
+            {{ formError }}
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+            <button class="enbauges-btn-secondary" @click="closeAddModal">
+              Annuler
+            </button>
+            <button class="enbauges-btn-primary" @click="submitEntry" :disabled="submitting">
+              {{ submitting ? 'Envoi...' : 'Publier' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showDeleteConfirm" class="enbauges-modal-backdrop" @click.self="showDeleteConfirm = false">
+      <div class="enbauges-modal" style="max-width: 20rem;">
+        <div class="enbauges-modal__header">
+          <h2 class="enbauges-modal__title">Supprimer?</h2>
+        </div>
+        <div class="enbauges-modal__body">
+          <p style="color: var(--enbauges-brown); margin-bottom: 1.5rem;">
+            Etes-vous sur de vouloir supprimer cette annonce?
+          </p>
+          <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+            <button class="enbauges-btn-secondary" @click="showDeleteConfirm = false">
+              Annuler
+            </button>
+            <button class="enbauges-btn-primary" @click="confirmDelete" style="background: #dc2626;">
+              Supprimer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const entries = ref([]);
+        const loading = ref(true);
+        const showAddModal = ref(false);
+        const showDeleteConfirm = ref(false);
+        const entryToDelete = ref(null);
+        const submitting = ref(false);
+        const formError = ref('');
+        const exceptionDate = ref('');
+        
+        const form = ref({
+          type: 'offer',
+          title: '',
+          origin: '',
+          destination: '',
+          date: '',
+          time: '',
+          frequency: 'one-time',
+          weekdays: [],
+          exceptions: [],
+          seats: null,
+          luggage: 'none',
+          contact: '',
+          description: ''
+        });
+
+        const toast = ref({
+          show: false,
+          type: 'success',
+          message: ''
+        });
+
+        const showToast = (message, type = 'success') => {
+          toast.value = { show: true, type, message };
+          setTimeout(() => {
+            toast.value.show = false;
+          }, 3000);
+        };
+
+        const formatDate = (dateStr) => {
+          if (!dateStr) return '';
+          const date = new Date(dateStr);
+          return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+        };
+
+        const formatDateShort = (dateStr) => {
+          if (!dateStr) return '';
+          const date = new Date(dateStr);
+          return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+        };
+
+        const formatWeekdays = (weekdays) => {
+          if (!weekdays || weekdays.length === 0) return '';
+          const dayLabels = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+          return weekdays.sort((a, b) => a - b).map(d => dayLabels[d]).join(', ');
+        };
+
+        const toggleWeekday = (day) => {
+          const idx = form.value.weekdays.indexOf(day);
+          if (idx === -1) {
+            form.value.weekdays.push(day);
+          } else {
+            form.value.weekdays.splice(idx, 1);
+          }
+        };
+
+        const addException = () => {
+          if (!exceptionDate.value) return;
+          if (!form.value.exceptions.includes(exceptionDate.value)) {
+            form.value.exceptions.push(exceptionDate.value);
+          }
+          exceptionDate.value = '';
+        };
+
+        const removeException = (idx) => {
+          form.value.exceptions.splice(idx, 1);
+        };
+
+        const loadEntries = async () => {
+          loading.value = true;
+          try {
+            const res = await fetch('/covoiturage/api');
+            const data = await res.json();
+            entries.value = data.entries || [];
+          } catch (error) {
+            console.error('Error loading entries:', error);
+            showToast('Erreur lors du chargement', 'error');
+          } finally {
+            loading.value = false;
+          }
+        };
+
+        const resetForm = () => {
+          form.value = {
+            type: 'offer',
+            title: '',
+            origin: '',
+            destination: '',
+            date: '',
+            time: '',
+            frequency: 'one-time',
+            weekdays: [],
+            exceptions: [],
+            seats: null,
+            luggage: 'none',
+            contact: '',
+            description: ''
+          };
+          exceptionDate.value = '';
+          formError.value = '';
+        };
+
+        const closeAddModal = () => {
+          showAddModal.value = false;
+          resetForm();
+        };
+
+        const submitEntry = async () => {
+          formError.value = '';
+          
+          if (!form.value.title.trim()) {
+            formError.value = 'Le titre est requis';
+            return;
+          }
+          if (!form.value.origin.trim()) {
+            formError.value = 'Le lieu de depart est requis';
+            return;
+          }
+          if (!form.value.destination.trim()) {
+            formError.value = 'La destination est requise';
+            return;
+          }
+          if (!form.value.date) {
+            formError.value = 'La date est requise';
+            return;
+          }
+          if (!form.value.contact.trim()) {
+            formError.value = 'Le contact est requis';
+            return;
+          }
+
+          submitting.value = true;
+          try {
+            const res = await fetch('/covoiturage/api', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(form.value)
+            });
+            
+            if (!res.ok) {
+              const error = await res.json();
+              throw new Error(error.error || 'Erreur lors de la creation');
+            }
+            
+            showToast('Annonce publiee avec succes!');
+            closeAddModal();
+            loadEntries();
+          } catch (error) {
+            formError.value = error.message;
+          } finally {
+            submitting.value = false;
+          }
+        };
+
+        const deleteEntry = (entry) => {
+          entryToDelete.value = entry;
+          showDeleteConfirm.value = true;
+        };
+
+        const confirmDelete = async () => {
+          if (!entryToDelete.value) return;
+          
+          try {
+            const res = await fetch(`/covoiturage/api/${entryToDelete.value._id}`, {
+              method: 'DELETE'
+            });
+            
+            if (!res.ok) {
+              throw new Error('Erreur lors de la suppression');
+            }
+            
+            showToast('Annonce supprimee');
+            showDeleteConfirm.value = false;
+            entryToDelete.value = null;
+            loadEntries();
+          } catch (error) {
+            showToast(error.message, 'error');
+          }
+        };
+
+        const handleKeydown = (e) => {
+          if (e.key === 'Escape') {
+            if (showAddModal.value) closeAddModal();
+            if (showDeleteConfirm.value) showDeleteConfirm.value = false;
+          }
+        };
+
+        onMounted(() => {
+          loadEntries();
+          window.addEventListener('keydown', handleKeydown);
+        });
+
+        return {
+          entries,
+          loading,
+          showAddModal,
+          showDeleteConfirm,
+          submitting,
+          formError,
+          form,
+          exceptionDate,
+          toast,
+          showToast,
+          formatDate,
+          formatDateShort,
+          formatWeekdays,
+          toggleWeekday,
+          addException,
+          removeException,
+          loadEntries,
+          closeAddModal,
+          submitEntry,
+          deleteEntry,
+          confirmDelete
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
