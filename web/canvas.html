@@ -27,27 +27,62 @@
       {{ toast.message }}
     </div>
 
-    <!-- Full-screen graph mode overlay -->
-    <div v-if="showGraphMode" style="position: fixed; inset: 0; z-index: 900; background: #1C1917; display: flex; flex-direction: column;">
-      <div style="position: absolute; top: 1rem; left: 1rem; right: 1rem; z-index: 10; display: flex; justify-content: space-between; align-items: center; pointer-events: none;">
+    <!-- Full-screen graph mode overlay : la constellation du territoire -->
+    <div v-if="showGraphMode" style="position: fixed; inset: 0; z-index: 900; background: radial-gradient(ellipse at 50% 40%, #101B33 0%, #0B1120 55%, #05070D 100%); display: flex; flex-direction: column;">
+      <div style="position: absolute; top: 1rem; left: 1rem; right: 1rem; z-index: 10; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; gap: 1rem;">
         <div style="display: flex; gap: 0.5rem; pointer-events: auto; flex-wrap: wrap;">
-          <span style="display: flex; align-items: center; gap: 0.375rem; background: rgba(255,255,255,0.12); color: #FAF7F2; padding: 0.25rem 0.625rem; border-radius: 999px; font-size: 0.75rem; font-weight: 500;">
-            <span style="width: 9px; height: 9px; border-radius: 50%; background: #C2703A; display: inline-block; flex-shrink: 0;"></span> Acteurs
-          </span>
-          <span style="display: flex; align-items: center; gap: 0.375rem; background: rgba(255,255,255,0.12); color: #FAF7F2; padding: 0.25rem 0.625rem; border-radius: 999px; font-size: 0.75rem; font-weight: 500;">
-            <span style="width: 9px; height: 9px; border-radius: 50%; background: #7A9E7E; display: inline-block; flex-shrink: 0;"></span> Solutions
-          </span>
-          <span style="display: flex; align-items: center; gap: 0.375rem; background: rgba(255,255,255,0.12); color: #FAF7F2; padding: 0.25rem 0.625rem; border-radius: 999px; font-size: 0.75rem; font-weight: 500;">
-            <span style="width: 9px; height: 9px; border-radius: 50%; background: #D4A03C; display: inline-block; flex-shrink: 0;"></span> Initiatives
-          </span>
-          <span style="color: rgba(250,247,242,0.4); font-size: 0.7rem; align-self: center; padding-left: 0.25rem;">La taille des nœuds reflète le nombre de connexions</span>
+          <button v-for="(label, t) in { actor: 'Acteurs', solution: 'Solutions', initiative: 'Initiatives' }" :key="t"
+            @click="toggleGraphFilter(t)"
+            :style="{
+              display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer',
+              background: graphFilters[t] ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: graphFilters[t] ? '#FAF7F2' : 'rgba(250,247,242,0.35)',
+              padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 500
+            }">
+            <span :style="{ width: '9px', height: '9px', borderRadius: '50%', display: 'inline-block', flexShrink: 0,
+              background: t === 'actor' ? '#C2703A' : t === 'solution' ? '#7A9E7E' : '#D4A03C',
+              opacity: graphFilters[t] ? 1 : 0.35 }"></span>
+            {{ label }}
+          </button>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.75rem; pointer-events: auto;">
-          <span v-if="graphLoading" style="color: rgba(250,247,242,0.6); font-size: 0.875rem;">Chargement du graphe...</span>
-          <button @click="closeGraphMode" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #FAF7F2; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;">✕ Fermer</button>
+        <div style="display: flex; align-items: center; gap: 0.5rem; pointer-events: auto;">
+          <span v-if="graphLoading" style="color: rgba(250,247,242,0.6); font-size: 0.875rem;">Constellation en préparation…</span>
+          <div v-if="graphSupports3D" style="display: flex; border: 1px solid rgba(255,255,255,0.2); border-radius: 0.5rem; overflow: hidden;">
+            <button @click="setGraphMode('3d')" :style="{ background: graphMode === '3d' ? 'rgba(255,255,255,0.18)' : 'transparent', border: 'none', color: '#FAF7F2', padding: '0.4rem 0.75rem', cursor: 'pointer', fontSize: '0.8125rem' }">3D</button>
+            <button @click="setGraphMode('2d')" :style="{ background: graphMode === '2d' ? 'rgba(255,255,255,0.18)' : 'transparent', border: 'none', color: '#FAF7F2', padding: '0.4rem 0.75rem', cursor: 'pointer', fontSize: '0.8125rem' }">2D</button>
+          </div>
+          <button @click="closeGraphMode" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #FAF7F2; padding: 0.4rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;">✕ Fermer</button>
         </div>
       </div>
-      <div id="cy" style="flex: 1;"></div>
+
+      <div style="position: absolute; bottom: 1rem; left: 1rem; z-index: 10; color: rgba(250,247,242,0.35); font-size: 0.75rem; pointer-events: none;">
+        <span v-if="graphMode === '3d'">Glissez pour orbiter · molette pour zoomer · cliquez un astre pour l'explorer</span>
+        <span v-else>La taille des nœuds reflète le nombre de connexions</span>
+      </div>
+
+      <!-- Side panel: selected node -->
+      <div v-if="graphSelected" style="position: absolute; top: 4.5rem; right: 1rem; z-index: 10; width: min(320px, calc(100vw - 2rem)); background: rgba(12, 18, 34, 0.92); border: 1px solid rgba(255,255,255,0.12); border-radius: 0.75rem; padding: 1.25rem; color: #FAF7F2; backdrop-filter: blur(6px);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.625rem;">
+          <span :class="'enbauges-badge-' + graphSelected.type">
+            {{ graphSelected.type === 'actor' ? 'Acteur' : graphSelected.type === 'solution' ? 'Solution' : 'Initiative' }}
+          </span>
+          <button @click="deselectGraphNode" style="background: none; border: none; color: rgba(250,247,242,0.5); cursor: pointer; font-size: 1rem; padding: 0.25rem;">✕</button>
+        </div>
+        <h3 style="font-weight: 700; font-size: 1.0625rem; margin-bottom: 0.5rem;">{{ graphSelected.title }}</h3>
+        <p style="font-size: 0.8125rem; color: rgba(250,247,242,0.7); line-height: 1.5; margin-bottom: 0.75rem;">{{ truncate(graphSelected.description, 160) }}</p>
+        <div style="display: flex; gap: 1rem; font-size: 0.75rem; color: rgba(250,247,242,0.5); margin-bottom: 1rem;">
+          <span>👍 {{ graphSelected.votes || 0 }}</span>
+          <span>🔗 {{ graphSelectedDegree }} {{ graphSelectedDegree === 1 ? 'lien' : 'liens' }}</span>
+        </div>
+        <div v-if="graphSelectedDegree === 0" style="font-size: 0.75rem; color: #D4A03C; margin-bottom: 0.75rem;">
+          ✨ Cette carte est seule — reliez-la pour faire vivre la constellation.
+        </div>
+        <button @click="openCardFromGraph" class="enbauges-btn-primary" style="width: 100%;">Ouvrir la carte</button>
+      </div>
+
+      <div id="graph3d" v-show="graphMode === '3d'" style="flex: 1;"></div>
+      <div id="cy" v-show="graphMode === '2d'" style="flex: 1;"></div>
     </div>
 
     <nav class="enbauges-navbar">
@@ -991,7 +1026,16 @@
         const claimingCard = ref(null);
         const showGraphMode = ref(false);
         const graphLoading = ref(false);
+        const graphMode = ref('3d');
+        const graphSupports3D = ref(true);
+        const graphFilters = reactive({ actor: true, solution: true, initiative: true });
+        const graphSelected = ref(null);
+        const graphSelectedDegree = ref(0);
         let cyInstance = null;
+        let fg3dInstance = null;
+        let graphRaw = { cards: [], links: [], degrees: {} };
+        let orbitTimer = null;
+        let selectedNodeId = null;
 
         function toggleOtherCards() {
           showOtherCards.value = !showOtherCards.value;
@@ -1012,16 +1056,254 @@
           setTimeout(() => { toast.show = false; }, 3000);
         }
 
+        function detectWebGL() {
+          try {
+            const c = document.createElement('canvas');
+            return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl')));
+          } catch (e) { return false; }
+        }
+
+        const loadedScripts = {};
+        function loadScript(src) {
+          if (loadedScripts[src]) return loadedScripts[src];
+          loadedScripts[src] = new Promise((resolve, reject) => {
+            const el = document.createElement('script');
+            el.src = src;
+            el.onload = resolve;
+            el.onerror = () => { delete loadedScripts[src]; reject(new Error('script load failed: ' + src)); };
+            document.head.appendChild(el);
+          });
+          return loadedScripts[src];
+        }
+
+        async function fetchGraphData() {
+          const [cardsRes, linksRes] = await Promise.all([
+            fetch('/api/cards?limit=1000'),
+            fetch('/api/links')
+          ]);
+          const { cards: allCards } = await cardsRes.json();
+          const { links: allLinks } = await linksRes.json();
+          const degrees = {};
+          allLinks.forEach(l => {
+            const src = l.sourceCardId?._id || l.sourceCardId;
+            const tgt = l.targetCardId?._id || l.targetCardId;
+            degrees[src] = (degrees[src] || 0) + 1;
+            degrees[tgt] = (degrees[tgt] || 0) + 1;
+          });
+          graphRaw = { cards: allCards, links: allLinks, degrees };
+        }
+
         async function openGraphMode() {
           showGraphMode.value = true;
           graphLoading.value = true;
+          graphSelected.value = null;
+          selectedNodeId = null;
+          const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          graphSupports3D.value = detectWebGL() && !reducedMotion;
+          graphMode.value = graphSupports3D.value ? '3d' : '2d';
           await Vue.nextTick();
-          await initGraph();
+          try {
+            await fetchGraphData();
+            if (graphMode.value === '3d') {
+              await initGraph3D();
+            } else {
+              await initGraph();
+            }
+          } catch (err) {
+            console.error('Graph init error:', err);
+            if (graphMode.value === '3d') {
+              // WebGL/CDN failure: degrade to the 2D fallback
+              graphMode.value = '2d';
+              graphSupports3D.value = false;
+              await Vue.nextTick();
+              await initGraph().catch(() => showToast('Erreur lors du chargement du graphe', 'error'));
+            } else {
+              showToast('Erreur lors du chargement du graphe', 'error');
+            }
+          } finally {
+            graphLoading.value = false;
+          }
+        }
+
+        async function setGraphMode(mode) {
+          if (graphMode.value === mode) return;
+          graphMode.value = mode;
+          graphSelected.value = null;
+          selectedNodeId = null;
+          await Vue.nextTick();
+          graphLoading.value = true;
+          try {
+            if (mode === '3d') {
+              await initGraph3D();
+            } else if (!cyInstance) {
+              await initGraph();
+            }
+          } finally {
+            graphLoading.value = false;
+          }
+        }
+
+        function stopOrbit() {
+          if (orbitTimer) { clearInterval(orbitTimer); orbitTimer = null; }
         }
 
         function closeGraphMode() {
+          stopOrbit();
           if (cyInstance) { cyInstance.destroy(); cyInstance = null; }
+          if (fg3dInstance) {
+            try { fg3dInstance._destructor && fg3dInstance._destructor(); } catch (e) {}
+            fg3dInstance = null;
+            const el = document.getElementById('graph3d');
+            if (el) el.innerHTML = '';
+          }
+          graphSelected.value = null;
+          selectedNodeId = null;
           showGraphMode.value = false;
+        }
+
+        const TYPE_COLOR = { actor: '#C2703A', solution: '#7A9E7E', initiative: '#D4A03C' };
+        const REL_PARTICLES = { reinforces: 4, uses: 2, depends_on: 2, inspires: 1 };
+        const REL_SPEED = { reinforces: 0.01, uses: 0.01, depends_on: 0.005, inspires: 0.004 };
+
+        function graphNeighbors(nodeId) {
+          const ids = new Set([nodeId]);
+          graphRaw.links.forEach(l => {
+            const src = l.sourceCardId?._id || l.sourceCardId;
+            const tgt = l.targetCardId?._id || l.targetCardId;
+            if (src === nodeId) ids.add(tgt);
+            if (tgt === nodeId) ids.add(src);
+          });
+          return ids;
+        }
+
+        function filteredGraphData() {
+          const visible = new Set();
+          const nodes = graphRaw.cards
+            .filter(c => graphFilters[c.type])
+            .map(c => {
+              visible.add(c._id);
+              return {
+                id: c._id,
+                name: c.title,
+                card: c,
+                type: c.type,
+                degree: graphRaw.degrees[c._id] || 0,
+                val: 1 + (graphRaw.degrees[c._id] || 0) * 2
+              };
+            });
+          const links = graphRaw.links
+            .filter(l => {
+              const src = l.sourceCardId?._id || l.sourceCardId;
+              const tgt = l.targetCardId?._id || l.targetCardId;
+              return visible.has(src) && visible.has(tgt);
+            })
+            .map(l => ({
+              source: l.sourceCardId?._id || l.sourceCardId,
+              target: l.targetCardId?._id || l.targetCardId,
+              relType: l.relationshipType
+            }));
+          return { nodes, links };
+        }
+
+        function toggleGraphFilter(t) {
+          graphFilters[t] = !graphFilters[t];
+          if (!graphFilters.actor && !graphFilters.solution && !graphFilters.initiative) {
+            graphFilters[t] = true; // never allow an empty sky
+            return;
+          }
+          if (fg3dInstance) fg3dInstance.graphData(filteredGraphData());
+          if (cyInstance && graphMode.value === '2d') { cyInstance.destroy(); cyInstance = null; initGraph(); }
+        }
+
+        function nodePaint(node) {
+          const base = TYPE_COLOR[node.type] || '#8B7355';
+          if (!selectedNodeId) return base;
+          return graphNeighbors(selectedNodeId).has(node.id) ? base : 'rgba(120,120,140,0.18)';
+        }
+
+        function selectGraphNode(node) {
+          selectedNodeId = node.id;
+          graphSelected.value = node.card;
+          graphSelectedDegree.value = node.degree;
+          if (fg3dInstance) {
+            stopOrbit();
+            const d = Math.hypot(node.x || 0, node.y || 0, node.z || 0) || 1;
+            const zoom = 90 / d + 1;
+            fg3dInstance.cameraPosition(
+              { x: (node.x || 0) * zoom, y: (node.y || 0) * zoom, z: (node.z || 0) * zoom + 40 },
+              node, 1200
+            );
+            fg3dInstance.refresh();
+          }
+        }
+
+        function deselectGraphNode() {
+          selectedNodeId = null;
+          graphSelected.value = null;
+          if (fg3dInstance) fg3dInstance.refresh();
+        }
+
+        function openCardFromGraph() {
+          const card = graphSelected.value;
+          closeGraphMode();
+          if (card) selectCard(card);
+        }
+
+        async function initGraph3D() {
+          await loadScript('https://unpkg.com/three@0.160.0/build/three.min.js');
+          await loadScript('https://unpkg.com/three-spritetext@1.8.2/dist/three-spritetext.min.js');
+          await loadScript('https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js');
+
+          const el = document.getElementById('graph3d');
+          if (!el) return;
+          if (fg3dInstance) {
+            fg3dInstance.graphData(filteredGraphData());
+            return;
+          }
+
+          fg3dInstance = ForceGraph3D()(el)
+            .width(el.clientWidth)
+            .height(el.clientHeight)
+            .backgroundColor('rgba(0,0,0,0)')
+            .showNavInfo(false)
+            .nodeColor(nodePaint)
+            .nodeOpacity(0.92)
+            .nodeResolution(16)
+            .nodeThreeObjectExtend(true)
+            .nodeThreeObject(node => {
+              const sprite = new SpriteText(
+                node.name.length > 22 ? node.name.slice(0, 20) + '…' : node.name
+              );
+              sprite.color = 'rgba(250,247,242,0.85)';
+              sprite.textHeight = 3.2;
+              sprite.position.set(0, -(5 + Math.cbrt(node.val) * 2.5), 0);
+              return sprite;
+            })
+            .linkColor(() => 'rgba(250,247,242,0.28)')
+            .linkOpacity(0.35)
+            .linkWidth(0.6)
+            .linkCurvature(0.15)
+            .linkDirectionalParticles(l => REL_PARTICLES[l.relType] || 2)
+            .linkDirectionalParticleSpeed(l => REL_SPEED[l.relType] || 0.007)
+            .linkDirectionalParticleWidth(1.6)
+            .linkDirectionalParticleColor(() => '#D4A03C')
+            .onNodeClick(selectGraphNode)
+            .onBackgroundClick(deselectGraphNode)
+            .graphData(filteredGraphData());
+
+          // Slow ambient orbit until the visitor takes over
+          let angle = 0;
+          const distance = 320;
+          fg3dInstance.cameraPosition({ x: distance, y: 60, z: 0 });
+          orbitTimer = setInterval(() => {
+            angle += 0.0025;
+            fg3dInstance.cameraPosition({
+              x: distance * Math.sin(angle),
+              y: 60 + 25 * Math.sin(angle / 3),
+              z: distance * Math.cos(angle)
+            });
+          }, 40);
+          fg3dInstance.controls().addEventListener('start', stopOrbit);
         }
 
         async function initGraph() {
@@ -1683,6 +1965,15 @@
           closeMapPicker,
           showGraphMode,
           graphLoading,
+          graphMode,
+          graphSupports3D,
+          graphFilters,
+          graphSelected,
+          graphSelectedDegree,
+          setGraphMode,
+          toggleGraphFilter,
+          deselectGraphNode,
+          openCardFromGraph,
           openGraphMode,
           closeGraphMode
         };
