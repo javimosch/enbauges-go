@@ -138,6 +138,12 @@ func Setup(mux *http.ServeMux, db *mongo.Database, plugins []Plugin) {
 			logger.Println("mount failed:", err)
 			continue
 		}
+		if pctx.Web != nil {
+			// Same URL convention as the Node loader: plugin assets are
+			// served at /plugin-static/<prefix>/<file>.
+			staticBase := "/plugin-static/" + strings.TrimPrefix(meta.RoutePrefix, "/") + "/"
+			mux.Handle("GET "+staticBase, http.StripPrefix(staticBase, http.FileServerFS(pctx.Web)))
+		}
 		for _, alias := range meta.Aliases {
 			target := meta.RoutePrefix
 			mux.HandleFunc("GET "+alias, func(w http.ResponseWriter, r *http.Request) {

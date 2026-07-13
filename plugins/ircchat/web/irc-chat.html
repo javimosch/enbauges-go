@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat IRC - Enbauges</title>
+  <meta name="description" content="Chat IRC old-school pour la communauté du Massif des Bauges">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="/css/enbauges.css" rel="stylesheet">
+  <style>
+    :root {
+      --irc-bg: #1a1a2e;
+      --irc-bg-darker: #0f0f1a;
+      --irc-bg-surface: #16213e;
+      --irc-bg-hover: #1a2744;
+      --irc-text: #c8d6e5;
+      --irc-text-dim: #576574;
+      --irc-text-bright: #f0f0f0;
+      --irc-accent: #7A9E7E;
+      --irc-accent-glow: rgba(122,158,126,0.3);
+      --irc-border: #2d3a4a;
+      --irc-highlight: #ffeaa7;
+      --irc-error: #e74c3c;
+      --irc-pinned-bg: rgba(255,234,167,0.08);
+      --irc-persist-bg: rgba(122,158,126,0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      background: var(--irc-bg);
+      color: var(--irc-text);
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    /* ─── App layout ──────────────────────────────────────────────── */
+    .irc-app {
+      display: flex;
+      height: 100vh;
+      width: 100%;
+    }
+
+    /* ─── Sidebar ─────────────────────────────────────────────────── */
+    .irc-sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: var(--irc-bg-darker);
+      border-right: 1px solid var(--irc-border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: transform 250ms ease;
+      z-index: 100;
+    }
+    .irc-sidebar__header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--irc-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .irc-sidebar__brand {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--irc-accent);
+      letter-spacing: 0.02em;
+    }
+    .irc-sidebar__toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--irc-text-dim);
+      cursor: pointer;
+      font-size: 1.125rem;
+      padding: 0.25rem;
+    }
+    .irc-sidebar__toggle:hover { color: var(--irc-text); }
+    .irc-sidebar__nick {
+      padding: 0.625rem 1rem;
+      border-bottom: 1px solid var(--irc-border);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .irc-sidebar__nick::before { content: '› '; color: var(--irc-text-dim); }
+    .irc-sidebar__change-nick {
+      background: none;
+      border: none;
+      color: var(--irc-text-dim);
+      cursor: pointer;
+      font-size: 0.75rem;
+      padding: 0.125rem 0.25rem;
+      border-radius: 0.25rem;
+      transition: all 150ms ease;
+      line-height: 1;
+    }
+    .irc-sidebar__change-nick:hover {
+      color: var(--irc-accent);
+      background: var(--irc-bg-hover);
+    }
+    .irc-sidebar__create {
+      margin: 0.75rem 1rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--irc-bg-surface);
+      border: 1px dashed var(--irc-border);
+      border-radius: 0.5rem;
+      color: var(--irc-text-dim);
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 200ms ease;
+      text-align: left;
+    }
+    .irc-sidebar__create:hover {
+      border-color: var(--irc-accent);
+      color: var(--irc-accent);
+      background: var(--irc-bg-hover);
+    }
+    .irc-sidebar__channels {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem 0;
+    }
+    .irc-sidebar__empty {
+      padding: 1.5rem 1rem;
+      color: var(--irc-text-dim);
+      font-size: 0.8125rem;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* ─── Channel items ────────────────────────────────────────────── */
+    .irc-channel-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: none;
+      border: none;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      color: var(--irc-text-dim);
+      font-family: inherit;
+      font-size: 0.875rem;
+      transition: all 150ms ease;
+    }
+    .irc-channel-item:hover {
+      background: var(--irc-bg-hover);
+      color: var(--irc-text);
+    }
+    .irc-channel-item--active {
+      background: var(--irc-bg-surface);
+      color: var(--irc-accent);
+      border-left: 3px solid var(--irc-accent);
+      padding-left: calc(1rem - 3px);
+    }
+    .irc-channel-item__hash {
+      color: var(--irc-text-dim);
+      font-weight: 400;
+    }
+    .irc-channel-item--active .irc-channel-item__hash { color: var(--irc-accent); opacity: 0.6; }
+    .irc-channel-item__name { font-weight: 600; }
+    .irc-channel-item__desc {
+      font-size: 0.6875rem;
+      color: var(--irc-text-dim);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 120px;
+    }
+
+    /* Channel item wrapper (for action buttons) */
+    .irc-channel-item-wrapper {
+      position: relative;
+    }
+    .irc-channel-item-wrapper:hover .irc-channel-item__actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .irc-channel-item__actions {
+      position: absolute;
+      right: 0.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      gap: 0.125rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 150ms ease;
+    }
+    .irc-channel-item__action {
+      background: var(--irc-bg-surface);
+      border: 1px solid var(--irc-border);
+      cursor: pointer;
+      font-size: 0.625rem;
+      padding: 0.125rem 0.375rem;
+      border-radius: 0.25rem;
+      color: var(--irc-text-dim);
+      transition: all 150ms ease;
+      line-height: 1;
+    }
+    .irc-channel-item__action:hover {
+      color: var(--irc-text-bright);
+      background: var(--irc-bg-hover);
+    }
+    .irc-channel-item__action--delete:hover {
+      color: var(--irc-error);
+      border-color: var(--irc-error);
+    }
+    .irc-channel-item-wrapper--active .irc-channel-item__actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ─── Main area ────────────────────────────────────────────────── */
+    .irc-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: var(--irc-bg);
+    }
+    .irc-main__mobile-header {
+      display: none;
+      padding: 0.75rem 1rem;
+      background: var(--irc-bg-darker);
+      border-bottom: 1px solid var(--irc-border);
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .irc-main__menu-btn {
+      background: none;
+      border: none;
+      color: var(--irc-text);
+      cursor: pointer;
+      font-size: 1.25rem;
+      padding: 0.25rem;
+    }
+    .irc-main__channel-name {
+      flex: 1;
+      font-weight: 700;
+      font-size: 0.9375rem;
+      color: var(--irc-accent);
+    }
+    .irc-main__my-nick {
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
+    /* ─── Pinned bar ──────────────────────────────────────────────── */
+    .irc-pinned-bar {
+      background: var(--irc-pinned-bg);
+      border-bottom: 1px solid rgba(255,234,167,0.15);
+      padding: 0.5rem 1rem;
+      overflow-x: auto;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .irc-pinned-bar__label {
+      font-size: 0.6875rem;
+      color: var(--irc-highlight);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-right: 0.75rem;
+    }
+    .irc-pinned-bar__messages { display: inline; }
+    .irc-pinned-msg {
+      display: inline;
+      font-size: 0.8125rem;
+      margin-right: 1rem;
+    }
+    .irc-pinned-msg__nick { font-weight: 600; }
+    .irc-pinned-msg__text { color: var(--irc-text); }
+
+    /* ─── Messages area ────────────────────────────────────────────── */
+    .irc-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem 0;
+      scroll-behavior: auto;
+    }
+    .irc-messages::-webkit-scrollbar { width: 6px; }
+    .irc-messages::-webkit-scrollbar-track { background: transparent; }
+    .irc-messages::-webkit-scrollbar-thumb { background: var(--irc-border); border-radius: 3px; }
+    .irc-messages::-webkit-scrollbar-thumb:hover { background: var(--irc-text-dim); }
+
+    .irc-messages__separator {
+      padding: 0.5rem 1rem;
+      font-size: 0.6875rem;
+      color: var(--irc-text-dim);
+      text-align: center;
+      border-bottom: 1px solid var(--irc-border);
+      margin-bottom: 0.5rem;
+    }
+
+    /* ─── Message row ──────────────────────────────────────────────── */
+    .irc-msg {
+      display: flex;
+      align-items: baseline;
+      gap: 0.375rem;
+      padding: 0.125rem 1rem;
+      line-height: 1.5;
+      font-size: 0.875rem;
+      position: relative;
+    }
+    .irc-msg:hover { background: var(--irc-bg-hover); }
+    .irc-msg--pinned { background: var(--irc-pinned-bg); }
+    .irc-msg--persistent { border-left: 2px solid var(--irc-accent); padding-left: calc(1rem - 2px); }
+
+    .irc-msg__time {
+      color: var(--irc-text-dim);
+      font-size: 0.6875rem;
+      min-width: 2.75rem;
+      flex-shrink: 0;
+    }
+    .irc-msg__nick {
+      font-weight: 700;
+      min-width: 6rem;
+      max-width: 10rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .irc-msg__nick-spacer {
+      min-width: 6rem;
+      flex-shrink: 0;
+    }
+    .irc-msg__text {
+      flex: 1;
+      word-break: break-word;
+      color: var(--irc-text);
+    }
+    .irc-msg__actions {
+      display: none;
+      gap: 0.25rem;
+      position: absolute;
+      right: 0.5rem;
+      top: 0;
+      background: var(--irc-bg-surface);
+      border: 1px solid var(--irc-border);
+      border-radius: 0.375rem;
+      padding: 0.125rem 0.25rem;
+    }
+    .irc-msg:hover .irc-msg__actions { display: flex; }
+    .irc-msg__action {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.6875rem;
+      padding: 0.125rem 0.25rem;
+      border-radius: 0.25rem;
+      color: var(--irc-text-dim);
+      transition: all 150ms ease;
+      line-height: 1;
+    }
+    .irc-msg__action:hover { color: var(--irc-text-bright); background: var(--irc-bg-hover); }
+    .irc-msg__action--active { color: var(--irc-accent); }
+    .irc-msg__action--delete:hover { color: var(--irc-error); }
+
+    /* ─── Input bar ────────────────────────────────────────────────── */
+    .irc-input-bar {
+      border-top: 1px solid var(--irc-border);
+      background: var(--irc-bg-darker);
+      flex-shrink: 0;
+    }
+    .irc-emoji-drawer {
+      border-bottom: 1px solid var(--irc-border);
+      padding: 0.5rem;
+      background: var(--irc-bg-surface);
+    }
+    .irc-emoji-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      max-width: 400px;
+    }
+    .irc-emoji-picker__item {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.25rem;
+      padding: 0.25rem;
+      border-radius: 0.375rem;
+      transition: background 150ms ease;
+      line-height: 1;
+    }
+    .irc-emoji-picker__item:hover { background: var(--irc-bg-hover); }
+
+    .irc-input-bar__form {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      gap: 0.5rem;
+    }
+    .irc-input-bar__emoji-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.25rem;
+      padding: 0.25rem;
+      border-radius: 0.375rem;
+      transition: background 150ms ease;
+      line-height: 1;
+    }
+    .irc-input-bar__emoji-btn:hover { background: var(--irc-bg-hover); }
+    .irc-input-bar__input {
+      flex: 1;
+      background: var(--irc-bg-surface);
+      border: 1px solid var(--irc-border);
+      border-radius: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      color: var(--irc-text-bright);
+      font-family: inherit;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 200ms ease;
+    }
+    .irc-input-bar__input:focus { border-color: var(--irc-accent); }
+    .irc-input-bar__input::placeholder { color: var(--irc-text-dim); }
+    .irc-input-bar__send {
+      background: var(--irc-accent);
+      border: none;
+      color: #fff;
+      padding: 0.5rem 0.875rem;
+      border-radius: 0.5rem;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 200ms ease;
+    }
+    .irc-input-bar__send:hover:not(:disabled) { background: #6b8e6f; transform: scale(1.05); }
+    .irc-input-bar__send:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* ─── Empty state ──────────────────────────────────────────────── */
+    .irc-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      color: var(--irc-text-dim);
+    }
+    .irc-empty__icon { font-size: 3rem; opacity: 0.3; }
+    .irc-empty__text { font-size: 0.9375rem; }
+
+    /* ─── Nick screen ──────────────────────────────────────────────── */
+    .irc-nick-screen {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--irc-bg-darker);
+    }
+    .irc-nick-screen__box {
+      text-align: center;
+      padding: 2.5rem;
+      background: var(--irc-bg-surface);
+      border: 1px solid var(--irc-border);
+      border-radius: 1rem;
+      width: 100%;
+      max-width: 22rem;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+    }
+    .irc-nick-screen__logo { font-size: 2.5rem; margin-bottom: 1rem; }
+    .irc-nick-screen__title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--irc-accent);
+      margin-bottom: 0.25rem;
+    }
+    .irc-nick-screen__subtitle {
+      font-size: 0.8125rem;
+      color: var(--irc-text-dim);
+      margin-bottom: 1.5rem;
+    }
+    .irc-nick-screen__input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: var(--irc-bg);
+      border: 1px solid var(--irc-border);
+      border-radius: 0.5rem;
+      color: var(--irc-text-bright);
+      font-family: inherit;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 200ms ease;
+      margin-bottom: 0.5rem;
+    }
+    .irc-nick-screen__input:focus { border-color: var(--irc-accent); }
+    .irc-nick-screen__input::placeholder { color: var(--irc-text-dim); }
+    .irc-nick-screen__error {
+      color: var(--irc-error);
+      font-size: 0.8125rem;
+      margin-bottom: 0.5rem;
+    }
+    .irc-nick-screen__btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--irc-accent);
+      border: none;
+      border-radius: 0.5rem;
+      color: #fff;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 200ms ease;
+    }
+    .irc-nick-screen__btn:hover { background: #6b8e6f; }
+    .irc-nick-screen__hint {
+      font-size: 0.75rem;
+      color: var(--irc-text-dim);
+      margin-top: 1rem;
+      line-height: 1.5;
+    }
+
+    /* ─── Modal ────────────────────────────────────────────────────── */
+    .irc-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 1rem;
+    }
+    .irc-modal {
+      background: var(--irc-bg-surface);
+      border: 1px solid var(--irc-border);
+      border-radius: 0.75rem;
+      width: 100%;
+      max-width: 24rem;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    }
+    .irc-modal__header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--irc-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .irc-modal__title {
+      font-weight: 700;
+      font-size: 0.9375rem;
+      color: var(--irc-accent);
+    }
+    .irc-modal__close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--irc-text-dim);
+      font-size: 1rem;
+      padding: 0.25rem;
+    }
+    .irc-modal__close:hover { color: var(--irc-text); }
+    .irc-modal__body {
+      padding: 1.25rem;
+    }
+    .irc-modal__footer {
+      padding: 0.75rem 1.25rem;
+      border-top: 1px solid var(--irc-border);
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+
+    .irc-field { display: block; margin-bottom: 1rem; }
+    .irc-field__label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.8125rem;
+      color: var(--irc-text-dim);
+      margin-bottom: 0.375rem;
+    }
+    .irc-field__input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      background: var(--irc-bg);
+      border: 1px solid var(--irc-border);
+      border-radius: 0.375rem;
+      color: var(--irc-text-bright);
+      font-family: inherit;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 200ms ease;
+    }
+    .irc-field__input:focus { border-color: var(--irc-accent); }
+    .irc-field__input::placeholder { color: var(--irc-text-dim); }
+    .irc-field__error {
+      color: var(--irc-error);
+      font-size: 0.8125rem;
+      margin-top: 0.25rem;
+    }
+
+    .irc-btn {
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 0.8125rem;
+      cursor: pointer;
+      transition: all 200ms ease;
+      border: 1px solid transparent;
+    }
+    .irc-btn--primary {
+      background: var(--irc-accent);
+      color: #fff;
+      border-color: var(--irc-accent);
+    }
+    .irc-btn--primary:hover { background: #6b8e6f; }
+    .irc-btn--ghost {
+      background: transparent;
+      color: var(--irc-text-dim);
+      border-color: var(--irc-border);
+    }
+    .irc-btn--ghost:hover { background: var(--irc-bg-hover); color: var(--irc-text); }
+
+    /* ─── Toast ────────────────────────────────────────────────────── */
+    .irc-toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 0.625rem 1.25rem;
+      border-radius: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      font-size: 0.8125rem;
+      z-index: 10000;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      animation: irc-toast-in 300ms ease;
+    }
+    .irc-toast--success { background: var(--irc-accent); color: #fff; }
+    .irc-toast--error { background: var(--irc-error); color: #fff; }
+    .irc-toast--out {
+      animation: irc-toast-out 300ms ease forwards;
+    }
+    @keyframes irc-toast-in {
+      from { opacity: 0; transform: translateX(-50%) translateY(0.5rem); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    @keyframes irc-toast-out {
+      from { opacity: 1; transform: translateX(-50%) translateY(0); }
+      to { opacity: 0; transform: translateX(-50%) translateY(0.5rem); }
+    }
+
+    /* ─── Scanline overlay (subtle) ────────────────────────────────── */
+    .irc-app::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 9998;
+    }
+
+    /* ─── Blinking cursor ─────────────────────────────────────────── */
+    @keyframes irc-blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    /* ─── Mobile responsive ────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .irc-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 280px;
+        transform: translateX(-100%);
+        z-index: 200;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+      }
+      .irc-sidebar--open { transform: translateX(0); }
+      .irc-sidebar__toggle { display: block; }
+      .irc-main__mobile-header { display: flex; }
+
+      .irc-msg__nick { min-width: 5rem; max-width: 7rem; font-size: 0.8125rem; }
+      .irc-msg__nick-spacer { min-width: 5rem; }
+      .irc-msg__text { font-size: 0.8125rem; }
+      .irc-msg__time { font-size: 0.625rem; min-width: 2.25rem; }
+      .irc-msg__actions { display: flex; position: static; background: none; border: none; padding: 0; }
+      .irc-msg__action { font-size: 0.625rem; }
+
+      .irc-nick-screen__box { margin: 1rem; padding: 1.5rem; }
+      .irc-emoji-picker { max-width: 100%; }
+    }
+
+    /* ─── CRT glow (optional subtle) ───────────────────────────────── */
+    @media (min-width: 769px) {
+      .irc-sidebar__brand {
+        text-shadow: 0 0 8px var(--irc-accent-glow);
+      }
+      .irc-msg__nick {
+        text-shadow: 0 0 4px rgba(255,255,255,0.05);
+      }
+    }
+  </style>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script src="/plugin-static/chat/irc-chat-helpers.js"></script>
+  <script src="/plugin-static/chat/irc-chat-app.js"></script>
+</body>
+</html>

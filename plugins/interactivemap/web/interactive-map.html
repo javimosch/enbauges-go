@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carte Interactive - Enbauges</title>
+  <meta name="description" content="Explorez et contribuez à la carte des ressources du Massif des Bauges">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="/css/enbauges.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; background: var(--enbauges-cream); }
+
+    .imap-navbar {
+      background: white;
+      border-bottom: 1px solid var(--enbauges-brown-light);
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1001;
+    }
+    .imap-navbar__brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1.125rem;
+      color: var(--enbauges-earth);
+    }
+    .imap-navbar__brand svg { width: 28px; height: 28px; }
+    .imap-navbar__actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    #map {
+      height: calc(100vh - 60px);
+      width: 100%;
+      background: #e8e4df;
+      z-index: 1;
+    }
+    #map.leaflet-container { background: #e8e4df; }
+
+    .imap-filters {
+      position: absolute;
+      top: 70px;
+      left: 1rem;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .imap-search {
+      display: flex;
+      align-items: center;
+      background: white;
+      border: 2px solid rgba(255,255,255,0.8);
+      border-radius: 9999px;
+      padding: 0.375rem 0.625rem;
+      box-shadow: 0 2px 8px rgba(61,50,41,0.12);
+      gap: 0.375rem;
+      transition: border-color 200ms ease, box-shadow 200ms ease;
+    }
+    .imap-search:focus-within {
+      border-color: var(--enbauges-sage);
+      box-shadow: 0 2px 8px rgba(61,50,41,0.12), 0 0 0 3px rgba(122,158,126,0.15);
+    }
+    .imap-search__icon {
+      color: var(--enbauges-brown-light);
+      flex-shrink: 0;
+    }
+    .imap-search__input {
+      border: none;
+      outline: none;
+      font-size: 0.8125rem;
+      font-family: inherit;
+      color: var(--enbauges-earth);
+      background: transparent;
+      width: 140px;
+      padding: 0;
+    }
+    .imap-search__input::placeholder {
+      color: var(--enbauges-brown-light);
+    }
+    .imap-search__clear {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.125rem;
+      color: var(--enbauges-brown-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 200ms ease, background 200ms ease;
+    }
+    .imap-search__clear:hover {
+      color: var(--enbauges-earth);
+      background: var(--enbauges-cream);
+    }
+    .imap-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.5rem 0.875rem;
+      border-radius: 9999px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      border: 2px solid rgba(255,255,255,0.8);
+      background: white;
+      cursor: pointer;
+      transition: all 200ms ease;
+      box-shadow: 0 2px 8px rgba(61,50,41,0.12);
+      white-space: nowrap;
+    }
+    .imap-filter-chip:hover { transform: scale(1.03); }
+    .imap-filter-chip--active { color: white; border-color: transparent; }
+    .imap-filter-chip--active.imap-filter-chip--lieu { background: var(--enbauges-sage); }
+    .imap-filter-chip--active.imap-filter-chip--service { background: var(--enbauges-terracotta); }
+    .imap-filter-chip--active.imap-filter-chip--evenement { background: var(--enbauges-amber); color: var(--enbauges-earth); }
+    .imap-filter-chip--active.imap-filter-chip--autre { background: #6B7280; }
+
+    .leaflet-marker-icon.imap-marker-icon {
+      border-radius: 50%;
+      border: 2.5px solid white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      width: 22px;
+      height: 22px;
+      cursor: grab !important;
+      transition: box-shadow 200ms ease;
+      overflow: visible !important;
+    }
+    .leaflet-marker-icon.imap-marker-icon:active {
+      cursor: grabbing !important;
+    }
+    .leaflet-dragging .leaflet-marker-icon.imap-marker-icon {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      transform: scale(1.15);
+    }
+    .imap-marker-label {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 3px;
+      white-space: nowrap;
+      font-size: 0.5625rem;
+      font-weight: 600;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--enbauges-earth);
+      background: rgba(255,255,255,0.92);
+      padding: 0.0625rem 0.375rem;
+      border-radius: 0.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      pointer-events: none;
+      line-height: 1.4;
+      letter-spacing: 0.01em;
+    }
+    .imap-marker--lieu { background: var(--enbauges-sage); }
+    .imap-marker--service { background: var(--enbauges-terracotta); }
+    .imap-marker--evenement { background: var(--enbauges-amber); }
+    .imap-marker--autre { background: #6B7280; }
+
+    .leaflet-popup-content-wrapper { border-radius: 12px; padding: 0; }
+    .leaflet-popup-content { margin: 0; min-width: 200px; }
+
+    .imap-popup {
+      padding: 1rem;
+      font-family: 'Inter', system-ui, sans-serif;
+    }
+    .imap-popup__category {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      color: white;
+    }
+    .imap-popup__category--lieu { background: var(--enbauges-sage); }
+    .imap-popup__category--service { background: var(--enbauges-terracotta); }
+    .imap-popup__category--evenement { background: var(--enbauges-amber); color: var(--enbauges-earth); }
+    .imap-popup__category--autre { background: #6B7280; }
+    .imap-popup__title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--enbauges-earth);
+      margin-bottom: 0.25rem;
+    }
+    .imap-popup__desc {
+      font-size: 0.8125rem;
+      color: var(--enbauges-brown);
+      margin-bottom: 0.5rem;
+      line-height: 1.5;
+    }
+    .imap-popup__meta {
+      font-size: 0.75rem;
+      color: var(--enbauges-brown-light);
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .imap-popup__confirm {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1.5px solid var(--enbauges-sage);
+      background: white;
+      color: var(--enbauges-sage);
+      cursor: pointer;
+      transition: all 200ms ease;
+      margin-top: 0.5rem;
+    }
+    .imap-popup__confirm:hover { background: var(--enbauges-sage); color: white; }
+    .imap-popup__confirm--confirmed { background: var(--enbauges-sage); color: white; }
+    .imap-popup__hint {
+      font-size: 0.6875rem;
+      color: var(--enbauges-brown-light);
+      font-style: italic;
+      margin: 0.25rem 0;
+      padding: 0.125rem 0;
+    }
+
+    .imap-list-btn {
+      position: absolute;
+      bottom: 5.5rem;
+      right: 1rem;
+      z-index: 1000;
+      background: white;
+      color: var(--enbauges-earth);
+      border: 2px solid var(--enbauges-brown-light);
+      padding: 0.75rem 1.25rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(61,50,41,0.12);
+      transition: all 200ms ease;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+    .imap-list-btn:hover { background: var(--enbauges-cream); border-color: var(--enbauges-sage); }
+    .imap-list-btn--active { background: var(--enbauges-earth); color: white; border-color: var(--enbauges-earth); }
+    .imap-list-btn--active:hover { background: var(--enbauges-brown); }
+
+    .imap-list-panel {
+      position: absolute;
+      top: 70px;
+      right: 1rem;
+      bottom: 0;
+      width: 340px;
+      max-width: calc(100vw - 2rem);
+      background: white;
+      border-radius: 1rem 1rem 0 0;
+      box-shadow: -4px 0 24px rgba(61,50,41,0.12);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      animation: imap-list-slide 300ms ease;
+      overflow: hidden;
+    }
+    @keyframes imap-list-slide {
+      from { opacity: 0; transform: translateX(1rem); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .imap-list-panel__header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--enbauges-brown-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .imap-list-panel__title {
+      font-weight: 700;
+      font-size: 0.9375rem;
+      color: var(--enbauges-earth);
+    }
+    .imap-list-panel__close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.25rem;
+      color: var(--enbauges-brown);
+      border-radius: 0.375rem;
+      transition: background 200ms ease;
+    }
+    .imap-list-panel__close:hover { background: var(--enbauges-cream); }
+    .imap-list-panel__empty {
+      padding: 2.5rem 1.25rem;
+      text-align: center;
+      color: var(--enbauges-brown);
+      font-size: 0.875rem;
+    }
+    .imap-list-panel__items {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .imap-list-item {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      padding: 0.875rem 1.25rem;
+      border: none;
+      background: white;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      transition: background 150ms ease;
+      border-bottom: 1px solid var(--enbauges-cream);
+    }
+    .imap-list-item:hover { background: var(--enbauges-cream); }
+    .imap-list-item:active { background: rgba(122,158,126,0.1); }
+    .imap-list-item__marker {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-size: 0.875rem;
+    }
+    .imap-list-item__dot--lieu { background: rgba(122,158,126,0.15); }
+    .imap-list-item__dot--service { background: rgba(180,93,62,0.15); }
+    .imap-list-item__dot--evenement { background: rgba(212,160,60,0.15); }
+    .imap-list-item__dot--autre { background: rgba(107,114,128,0.15); }
+    .imap-list-item__body { flex: 1; min-width: 0; }
+    .imap-list-item__title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--enbauges-earth);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .imap-list-item__desc {
+      font-size: 0.75rem;
+      color: var(--enbauges-brown);
+      line-height: 1.45;
+      margin-top: 0.125rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .imap-list-item__meta {
+      font-size: 0.6875rem;
+      color: var(--enbauges-brown-light);
+      margin-top: 0.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.125rem;
+      align-items: center;
+    }
+    .imap-list-item__cat {
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-size: 0.625rem;
+    }
+    .imap-list-item__cat--lieu { color: var(--enbauges-sage); }
+    .imap-list-item__cat--service { color: var(--enbauges-terracotta); }
+    .imap-list-item__cat--evenement { color: #b8860b; }
+    .imap-list-item__cat--autre { color: #6B7280; }
+
+    .imap-add-btn {
+      position: absolute;
+      bottom: 2rem;
+      right: 1rem;
+      z-index: 1000;
+      background: var(--enbauges-sage);
+      color: white;
+      border: none;
+      padding: 0.875rem 1.5rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      font-size: 0.9375rem;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(122,158,126,0.35);
+      transition: all 200ms ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .imap-add-btn:hover { background: var(--enbauges-sage-dark); transform: translateY(-1px); }
+    .imap-add-btn:active { transform: scale(0.98); }
+
+    .imap-labels-btn {
+      position: absolute;
+      bottom: 8.75rem;
+      right: 1rem;
+      z-index: 1000;
+      background: white;
+      color: var(--enbauges-brown);
+      border: 2px solid var(--enbauges-brown-light);
+      padding: 0.5rem 0.875rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(61,50,41,0.12);
+      transition: all 200ms ease;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .imap-labels-btn:hover { background: var(--enbauges-cream); border-color: var(--enbauges-sage); }
+    .imap-labels-btn--active { background: var(--enbauges-earth); color: white; border-color: var(--enbauges-earth); }
+    .imap-labels-btn--active:hover { background: var(--enbauges-brown); }
+
+    .imap-hint {
+      position: absolute;
+      bottom: 9rem;
+      right: 1rem;
+      z-index: 1000;
+      background: white;
+      padding: 0.625rem 1rem;
+      border-radius: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--enbauges-brown);
+      box-shadow: 0 2px 8px rgba(61,50,41,0.12);
+      animation: imap-hint-in 300ms ease;
+      max-width: 250px;
+    }
+    @keyframes imap-hint-in {
+      from { opacity: 0; transform: translateY(0.5rem); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .imap-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(61,50,41,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 1rem;
+    }
+    .imap-modal {
+      background: white;
+      border-radius: 1.25rem;
+      width: 100%;
+      max-width: 28rem;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(61,50,41,0.2);
+    }
+    .imap-modal__header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--enbauges-brown-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .imap-modal__title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--enbauges-earth);
+    }
+    .imap-modal__close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.375rem;
+      color: var(--enbauges-brown);
+    }
+    .imap-modal__body { padding: 1.5rem; }
+    .imap-modal__footer {
+      padding: 1.25rem 1.5rem;
+      border-top: 1px solid var(--enbauges-brown-light);
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+
+    .imap-field { margin-bottom: 1.25rem; }
+    .imap-field__label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.375rem;
+      color: var(--enbauges-earth);
+      font-size: 0.875rem;
+    }
+    .imap-field__input {
+      width: 100%;
+      padding: 0.625rem 0.875rem;
+      border: 2px solid var(--enbauges-brown-light);
+      border-radius: 0.625rem;
+      font-size: 0.9375rem;
+      background: white;
+      color: var(--enbauges-earth);
+      transition: border-color 200ms ease, box-shadow 200ms ease;
+      min-height: 42px;
+      font-family: inherit;
+    }
+    .imap-field__input:focus {
+      outline: none;
+      border-color: var(--enbauges-sage);
+      box-shadow: 0 0 0 3px rgba(122,158,126,0.2);
+    }
+    .imap-field__input::placeholder { color: var(--enbauges-brown); opacity: 0.6; }
+    .imap-field__counter {
+      font-size: 0.6875rem;
+      color: var(--enbauges-brown);
+      text-align: right;
+      margin-top: 0.125rem;
+    }
+
+    .imap-cat-toggle {
+      display: flex;
+      gap: 0.375rem;
+      flex-wrap: wrap;
+    }
+    .imap-cat-toggle__btn {
+      padding: 0.375rem 0.75rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      font-size: 0.8125rem;
+      border: 2px solid var(--enbauges-brown-light);
+      background: white;
+      color: var(--enbauges-brown);
+      cursor: pointer;
+      transition: all 200ms ease;
+    }
+    .imap-cat-toggle__btn:hover { background: var(--enbauges-cream); }
+    .imap-cat-toggle__btn--active { color: white; border-color: transparent; }
+    .imap-cat-toggle__btn--active[data-cat="lieu"] { background: var(--enbauges-sage); }
+    .imap-cat-toggle__btn--active[data-cat="service"] { background: var(--enbauges-terracotta); }
+    .imap-cat-toggle__btn--active[data-cat="evenement"] { background: var(--enbauges-amber); color: var(--enbauges-earth); }
+    .imap-cat-toggle__btn--active[data-cat="autre"] { background: #6B7280; }
+
+    .imap-toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.75rem;
+      font-weight: 500;
+      font-size: 0.875rem;
+      z-index: 10000;
+      box-shadow: 0 8px 24px rgba(61,50,41,0.2);
+      animation: imap-toast-in 300ms ease;
+    }
+    .imap-toast--success { background: var(--enbauges-sage); color: white; }
+    .imap-toast--error { background: #DC2626; color: white; }
+    @keyframes imap-toast-in {
+      from { opacity: 0; transform: translateX(-50%) translateY(0.5rem); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    @media (max-width: 640px) {
+      .imap-filters { top: 65px; left: 0.5rem; }
+      .imap-filter-chip { font-size: 0.75rem; padding: 0.375rem 0.625rem; }
+      .imap-search__input { width: 110px; font-size: 0.75rem; }
+      .imap-add-btn { bottom: 1.5rem; right: 0.75rem; padding: 0.75rem 1.125rem; font-size: 0.875rem; }
+      .imap-hint { bottom: 10.5rem; right: 0.75rem; }
+      .imap-labels-btn { bottom: 7rem; right: 0.75rem; padding: 0.375rem 0.625rem; font-size: 0.6875rem; }
+      .imap-list-btn { bottom: 4.25rem; right: 0.75rem; padding: 0.625rem 0.875rem; font-size: 0.8125rem; }
+      .imap-list-panel {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0;
+        animation: imap-list-slide-up 300ms ease;
+      }
+      @keyframes imap-list-slide-up {
+        from { opacity: 0; transform: translateY(1rem); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    }
+  </style>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script src="/plugin-static/carte-interactive/interactive-map-helpers.js"></script>
+  <script src="/plugin-static/carte-interactive/interactive-map-modal.js"></script>
+  <script src="/plugin-static/carte-interactive/interactive-map-app.js"></script>
+</body>
+</html>

@@ -60,9 +60,11 @@ vérif bidirectionnelle passée, commit.
   Portés, compatibilité bidirectionnelle vérifiée avec les plugins Node sur
   `lostitems` et `carpoolentries`. Helpers `ServeWebFile`/`DBCtx` ajoutés au
   package `plugin` au passage.
-- **Vague 2 — les moyens** : `irc-chat`, `interactive-map`.
-  Chat : 2 modèles + polling (rien de spécial côté serveur). Carte : CRUD
-  marqueurs géolocalisés.
+- **Vague 2 — les moyens** : `irc-chat`, `interactive-map`. ✔ (2026-07-13)
+  Portés avec l'index TTL partiel (90 j) des messages, la limite anti-vandalisme
+  de 5 km, et le service des assets JS sous `/plugin-static/<prefix>/`
+  (même convention d'URL que le loader Node). Compat bidirectionnelle vérifiée
+  sur `ircchannels`, `ircmessages`, `mapmarkers`.
 - **Vague 3 — les gros** : `open-panneau` (T2 requis), `panier-libre`.
   Attention open-panneau : workflow d'approbation des mairies + admin ;
   panier-libre : cascades Provider→Baskets→Bookings à préserver.
