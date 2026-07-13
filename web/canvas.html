@@ -1196,6 +1196,23 @@
         }
 
         const TYPE_COLOR = { actor: '#C2703A', solution: '#7A9E7E', initiative: '#D4A03C' };
+        const TYPE_COLOR_BRIGHT = { actor: '#F0A876', solution: '#B8DCBB', initiative: '#F5CD7E' };
+        const REL_LABEL = { depends_on: 'dépend de', reinforces: 'renforce', uses: 'utilise', inspires: 'inspire' };
+        let neighborRels = {}; // nodeId -> relation text, relative to the selected node
+
+        function buildNeighborRels(nodeId) {
+          const rels = {};
+          graphRaw.links.forEach(l => {
+            const src = l.sourceCardId?._id || l.sourceCardId;
+            const tgt = l.targetCardId?._id || l.targetCardId;
+            const verb = REL_LABEL[l.relationshipType] || l.relationshipType;
+            // Arrows read along the link direction: "→ renforce" = the
+            // selected star does it; "renforce →" = this star does it.
+            if (src === nodeId) rels[tgt] = '→ ' + verb;
+            else if (tgt === nodeId) rels[src] = verb + ' →';
+          });
+          return rels;
+        }
         const REL_PARTICLES = { reinforces: 4, uses: 2, depends_on: 2, inspires: 1 };
         const REL_SPEED = { reinforces: 0.01, uses: 0.01, depends_on: 0.005, inspires: 0.004 };
 
@@ -1250,9 +1267,11 @@
         }
 
         function nodePaint(node) {
-          const base = TYPE_COLOR[node.type] || '#8B7355';
-          if (!selectedNodeId) return base;
-          return graphNeighbors(selectedNodeId).has(node.id) ? base : 'rgba(120,120,140,0.18)';
+          if (!selectedNodeId) return TYPE_COLOR[node.type] || '#8B7355';
+          if (node.id === selectedNodeId) return TYPE_COLOR_BRIGHT[node.type] || '#FAF7F2';
+          return graphNeighbors(selectedNodeId).has(node.id)
+            ? TYPE_COLOR[node.type] || '#8B7355'
+            : 'rgba(120,120,140,0.18)';
         }
 
         function handleGraphNodeClick(node) {
@@ -1270,17 +1289,19 @@
 
         function selectGraphNode(node) {
           selectedNodeId = node.id;
+          neighborRels = buildNeighborRels(node.id);
           graphSelected.value = node.card;
           graphSelectedDegree.value = node.degree;
           if (fg3dInstance) {
             stopOrbit();
+            // Frame the star from a comfortable distance along its axis
             const d = Math.hypot(node.x || 0, node.y || 0, node.z || 0) || 1;
-            const zoom = 90 / d + 1;
+            const ratio = 1 + 220 / d;
             fg3dInstance.cameraPosition(
-              { x: (node.x || 0) * zoom, y: (node.y || 0) * zoom, z: (node.z || 0) * zoom + 40 },
+              { x: (node.x || 0) * ratio, y: (node.y || 0) * ratio + 20, z: (node.z || 0) * ratio },
               node, 1200
             );
-            fg3dInstance.refresh();
+            refreshGraphStyles();
           }
         }
 
@@ -1290,7 +1311,8 @@
           graphLinking.value = null;
           graphPendingLink.value = null;
           graphLinkError.value = '';
-          if (fg3dInstance) fg3dInstance.refresh();
+          neighborRels = {};
+          refreshGraphStyles();
         }
 
         function startGraphLink() {
@@ -1352,6 +1374,42 @@
           if (card) selectCard(card);
         }
 
+        function nodeSprite(node) {
+          const short = node.name.length > 22 ? node.name.slice(0, 20) + '…' : node.name;
+          const isSelected = node.id === selectedNodeId;
+          const rel = !isSelected && selectedNodeId ? neighborRels[node.id] : null;
+          const sprite = new SpriteText(rel ? short + '\n' + rel : short);
+          if (isSelected) {
+            sprite.color = '#FFFFFF';
+            sprite.textHeight = 4.2;
+            sprite.fontWeight = 'bold';
+          } else if (rel) {
+            sprite.color = '#F5CD7E';
+            sprite.textHeight = 3.4;
+          } else if (selectedNodeId && !graphNeighbors(selectedNodeId).has(node.id)) {
+            sprite.color = 'rgba(250,247,242,0.18)';
+            sprite.textHeight = 3.2;
+          } else {
+            sprite.color = 'rgba(250,247,242,0.85)';
+            sprite.textHeight = 3.2;
+          }
+          sprite.position.set(0, -(5 + Math.cbrt(node.val) * 2.5) - (rel ? 2 : 0), 0);
+          return sprite;
+        }
+
+        function refreshGraphStyles() {
+          if (!fg3dInstance) return;
+          // A fresh accessor identity forces sprite regeneration
+          fg3dInstance.nodeThreeObject(n => nodeSprite(n));
+          fg3dInstance.refresh();
+          // Emphasize the selected star, reset the others
+          fg3dInstance.graphData().nodes.forEach(n => {
+            if (!n.__threeObj) return;
+            const k = n.id === selectedNodeId ? 1.35 : 1;
+            n.__threeObj.scale.set(k, k, k);
+          });
+        }
+
         async function initGraph3D() {
           await loadScript('https://unpkg.com/three@0.160.0/build/three.min.js');
           await loadScript('https://unpkg.com/three-spritetext@1.8.2/dist/three-spritetext.min.js');
@@ -1373,15 +1431,7 @@
             .nodeOpacity(0.92)
             .nodeResolution(16)
             .nodeThreeObjectExtend(true)
-            .nodeThreeObject(node => {
-              const sprite = new SpriteText(
-                node.name.length > 22 ? node.name.slice(0, 20) + '…' : node.name
-              );
-              sprite.color = 'rgba(250,247,242,0.85)';
-              sprite.textHeight = 3.2;
-              sprite.position.set(0, -(5 + Math.cbrt(node.val) * 2.5), 0);
-              return sprite;
-            })
+            .nodeThreeObject(node => nodeSprite(node))
             .linkColor(() => 'rgba(250,247,242,0.28)')
             .linkOpacity(0.35)
             .linkWidth(0.6)
@@ -1417,7 +1467,7 @@
             if (!fg3dInstance) return;
             const k = 1 + 0.18 * Math.sin(t / 500);
             fg3dInstance.graphData().nodes.forEach(n => {
-              if (n.degree === 0 && n.__threeObj) n.__threeObj.scale.set(k, k, k);
+              if (n.degree === 0 && n.id !== selectedNodeId && n.__threeObj) n.__threeObj.scale.set(k, k, k);
             });
             orphanPulseRaf = requestAnimationFrame(pulse);
           };
