@@ -7,11 +7,11 @@ import (
 	"github.com/javimosch/enbauges-go/plugin"
 	"github.com/javimosch/enbauges-go/plugins/calendar"
 	"github.com/javimosch/enbauges-go/plugins/carpool"
-	"github.com/javimosch/enbauges-go/plugins/interactivemap"
-	"github.com/javimosch/enbauges-go/plugins/ircchat"
-	"github.com/javimosch/enbauges-go/plugins/lostitems"
-	"github.com/javimosch/enbauges-go/plugins/openpanneau"
-	"github.com/javimosch/enbauges-go/plugins/panierlibre"
+	interactivemap "github.com/javimosch/enbauges-go/plugins/interactive-map"
+	ircchat "github.com/javimosch/enbauges-go/plugins/irc-chat"
+	lostitems "github.com/javimosch/enbauges-go/plugins/lost-items"
+	openpanneau "github.com/javimosch/enbauges-go/plugins/open-panneau"
+	panierlibre "github.com/javimosch/enbauges-go/plugins/panier-libre"
 )
 
 func All() []plugin.Plugin {

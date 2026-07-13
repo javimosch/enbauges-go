@@ -1,0 +1,3 @@
+DEPLOY_HOST=vps1
+DEPLOY_PATH=/apps/enbauges-go
+DEPLOY_SERVICE=enbauges-go

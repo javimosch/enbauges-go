@@ -7,6 +7,7 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /enbauges-go .
 
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates tzdata
-COPY --from=build /enbauges-go /enbauges-go
+WORKDIR /app
+COPY --from=build /enbauges-go /app/enbauges-go
 EXPOSE 3000
-ENTRYPOINT ["/enbauges-go"]
+ENTRYPOINT ["/app/enbauges-go"]
