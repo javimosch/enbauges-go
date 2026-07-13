@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"hash/crc32"
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -40,7 +43,7 @@ func getTemplate(name string) (*template.Template, error) {
 	if err != nil {
 		return nil, err
 	}
-	t, err := template.New(name).Parse(string(data))
+	t, err := template.New(name).Parse(string(versionAssets(data)))
 	if err != nil {
 		return nil, err
 	}
@@ -48,6 +51,25 @@ func getTemplate(name string) (*template.Template, error) {
 		tmplCache[name] = t
 	}
 	return t, nil
+}
+
+// cssVersion derives a cache-busting token from the stylesheet's actual
+// content, so any edit (embedded or overlay) yields a new URL and stale
+// browser copies can never survive.
+func cssVersion() string {
+	data, err := webOverlay.ReadFile("css/enbauges.css")
+	if err != nil {
+		return "0"
+	}
+	sum := crc32.ChecksumIEEE(data)
+	return strconv.FormatUint(uint64(sum), 36)
+}
+
+// versionAssets stamps ?v=<hash> on the shared stylesheet reference.
+func versionAssets(html []byte) []byte {
+	return bytes.ReplaceAll(html,
+		[]byte(`href="/css/enbauges.css"`),
+		[]byte(`href="/css/enbauges.css?v=`+cssVersion()+`"`))
 }
 
 func servePage(name string) http.HandlerFunc {
@@ -62,7 +84,7 @@ func servePage(name string) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-cache")
-		w.Write(data)
+		w.Write(versionAssets(data))
 	}
 }
 

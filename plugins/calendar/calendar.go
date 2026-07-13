@@ -92,15 +92,7 @@ func (c *Calendar) col(ctx *plugin.Context) *mongo.Collection {
 }
 
 func (c *Calendar) Mount(mux *http.ServeMux, ctx *plugin.Context) error {
-	mux.HandleFunc("GET "+prefix, func(w http.ResponseWriter, r *http.Request) {
-		data, err := ctx.Web.ReadFile("calendar.html")
-		if err != nil {
-			http.Error(w, "view unavailable", 500)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(data)
-	})
+	mux.HandleFunc("GET "+prefix, plugin.ServeWebFile(ctx, "calendar.html"))
 	mux.HandleFunc("GET "+prefix+"/api", func(w http.ResponseWriter, r *http.Request) { c.list(w, r, ctx) })
 	mux.HandleFunc("POST "+prefix+"/api", func(w http.ResponseWriter, r *http.Request) { c.create(w, r, ctx) })
 	mux.HandleFunc("GET "+prefix+"/api/{id}", func(w http.ResponseWriter, r *http.Request) { c.get(w, r, ctx) })

@@ -52,6 +52,7 @@ func main() {
 		log.Printf("web overlay active: disk files under %s take precedence", webDir)
 	}
 	webOverlay = plugin.NewOverlayFS(webDir, embeddedWeb)
+	plugin.VersionAssets = versionAssets
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

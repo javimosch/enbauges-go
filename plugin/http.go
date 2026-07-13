@@ -81,6 +81,13 @@ func ServeWebFile(ctx *Context, name string) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-cache")
+		if VersionAssets != nil {
+			data = VersionAssets(data)
+		}
 		w.Write(data)
 	}
 }
+
+// VersionAssets, when set by the host app, rewrites shared asset URLs in
+// served plugin views to cache-busted versions.
+var VersionAssets func([]byte) []byte
