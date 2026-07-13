@@ -62,15 +62,6 @@ func oid(w http.ResponseWriter, r *http.Request, key, msg string) (primitive.Obj
 	return id, true
 }
 
-func parseDate(s string) (time.Time, bool) {
-	for _, layout := range []string{time.RFC3339, "2006-01-02"} {
-		if t, err := time.Parse(layout, s); err == nil {
-			return t, true
-		}
-	}
-	return time.Time{}, false
-}
-
 // refreshStatus persists a recomputed basket status if it changed, like the
 // lazy refresh the Node routes do on every read.
 func (p *PanierLibre) refreshStatus(r *http.Request, ctx *plugin.Context, b *Basket) {
@@ -369,14 +360,14 @@ func (p *PanierLibre) Mount(mux *http.ServeMux, ctx *plugin.Context) error {
 			plugin.WriteErr(w, 400, "Articles invalides")
 			return
 		}
-		startDate, ok := parseDate(*in.StartDate)
+		startDate, ok := plugin.ParseDate(*in.StartDate)
 		if !ok {
 			plugin.WriteErr(w, 400, "Date de début requise")
 			return
 		}
 		var endDate *time.Time
 		if in.EndDate != nil && *in.EndDate != "" {
-			if t, ok := parseDate(*in.EndDate); ok {
+			if t, ok := plugin.ParseDate(*in.EndDate); ok {
 				endDate = &t
 			}
 		}
@@ -430,14 +421,14 @@ func (p *PanierLibre) Mount(mux *http.ServeMux, ctx *plugin.Context) error {
 			b.Description = trunc(str(in.Description), 1000)
 		}
 		if in.StartDate != nil {
-			if t, ok := parseDate(*in.StartDate); ok {
+			if t, ok := plugin.ParseDate(*in.StartDate); ok {
 				b.StartDate = t
 			}
 		}
 		if in.EndDate != nil {
 			if *in.EndDate == "" {
 				b.EndDate = nil
-			} else if t, ok := parseDate(*in.EndDate); ok {
+			} else if t, ok := plugin.ParseDate(*in.EndDate); ok {
 				b.EndDate = &t
 			}
 		}

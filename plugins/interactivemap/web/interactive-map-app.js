@@ -370,7 +370,17 @@ window.InteractiveMapApp = (function() {
         .then(function(data) {
           setSubmitting(false);
           closeModal();
-          loadMarkers();
+          if (modal.isEdit) {
+            loadMarkers();
+          } else {
+            // Append directly so the new marker shows immediately even when
+            // category filters would exclude it, then fly to it.
+            setMarkers(function(prev) { return prev.concat([data]); });
+            if (mapRef.current && data.location) {
+              mapRef.current.flyTo([data.location.lat, data.location.lng],
+                Math.max(mapRef.current.getZoom(), 14));
+            }
+          }
           helpers.showToast(modal.isEdit ? 'Marqueur modifié' : 'Marqueur ajouté !');
 
           // Remove temp marker

@@ -48,6 +48,23 @@ func CheckBasicAuth(r *http.Request, user, pass string) bool {
 		subtle.ConstantTimeCompare([]byte(p), []byte(pass)) == 1
 }
 
+// ParseDate accepts the date formats browsers actually send — full RFC3339,
+// datetime-local ("2006-01-02T15:04"), and bare date inputs ("2006-01-02") —
+// matching the leniency of JavaScript's new Date() that the Node app relied on.
+func ParseDate(s string) (time.Time, bool) {
+	for _, layout := range []string{
+		time.RFC3339,
+		"2006-01-02T15:04:05",
+		"2006-01-02T15:04",
+		"2006-01-02",
+	} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, true
+		}
+	}
+	return time.Time{}, false
+}
+
 // DBCtx returns a 5s-bounded context for a request's database work.
 func DBCtx(r *http.Request) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(r.Context(), 5*time.Second)

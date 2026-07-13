@@ -202,7 +202,7 @@ type entryInput struct {
 func parseDates(vals []string) []time.Time {
 	out := []time.Time{}
 	for _, v := range vals {
-		if t, err := time.Parse(time.RFC3339, v); err == nil {
+		if t, ok := plugin.ParseDate(v); ok {
 			out = append(out, t)
 		}
 	}
@@ -247,8 +247,8 @@ func (c *Calendar) create(w http.ResponseWriter, r *http.Request, ctx *plugin.Co
 		plugin.WriteErr(w, 400, "Le titre doit faire moins de 200 caracteres")
 		return
 	}
-	startDate, err := time.Parse(time.RFC3339, *in.StartDate)
-	if err != nil {
+	startDate, ok := plugin.ParseDate(*in.StartDate)
+	if !ok {
 		plugin.WriteErr(w, 400, "La date de debut est requise")
 		return
 	}
@@ -272,7 +272,7 @@ func (c *Calendar) create(w http.ResponseWriter, r *http.Request, ctx *plugin.Co
 		UpdatedAt:   now,
 	}
 	if in.EndDate != nil && *in.EndDate != "" {
-		if t, err := time.Parse(time.RFC3339, *in.EndDate); err == nil {
+		if t, ok := plugin.ParseDate(*in.EndDate); ok {
 			e.EndDate = &t
 		}
 	}
@@ -318,14 +318,14 @@ func (c *Calendar) update(w http.ResponseWriter, r *http.Request, ctx *plugin.Co
 		set["type"] = str(in.Type)
 	}
 	if in.StartDate != nil {
-		if t, err := time.Parse(time.RFC3339, *in.StartDate); err == nil {
+		if t, ok := plugin.ParseDate(*in.StartDate); ok {
 			set["startDate"] = t
 		}
 	}
 	if in.EndDate != nil {
 		if *in.EndDate == "" {
 			set["endDate"] = nil
-		} else if t, err := time.Parse(time.RFC3339, *in.EndDate); err == nil {
+		} else if t, ok := plugin.ParseDate(*in.EndDate); ok {
 			set["endDate"] = t
 		}
 	}

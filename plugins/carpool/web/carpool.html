@@ -456,20 +456,30 @@
         const formError = ref('');
         const exceptionDate = ref('');
         
+        // Sensible defaults + remembered fields (origin/destination/contact)
+        const carpoolDefaults = () => {
+          const saved = JSON.parse(localStorage.getItem('carpool_prefs') || '{}');
+          const inOneHour = new Date(Date.now() + 3600 * 1000);
+          const pad = n => String(n).padStart(2, '0');
+          return {
+            date: inOneHour.getFullYear() + '-' + pad(inOneHour.getMonth() + 1) + '-' + pad(inOneHour.getDate()),
+            time: pad(inOneHour.getHours()) + ':' + pad(inOneHour.getMinutes()),
+            origin: saved.origin || '',
+            destination: saved.destination || '',
+            contact: saved.contact || ''
+          };
+        };
+
         const form = ref({
           type: 'offer',
           title: '',
-          origin: '',
-          destination: '',
-          date: '',
-          time: '',
           frequency: 'one-time',
           weekdays: [],
           exceptions: [],
           seats: null,
           luggage: 'none',
-          contact: '',
-          description: ''
+          description: '',
+          ...carpoolDefaults()
         });
 
         const toast = ref({
@@ -542,17 +552,13 @@
           form.value = {
             type: 'offer',
             title: '',
-            origin: '',
-            destination: '',
-            date: '',
-            time: '',
             frequency: 'one-time',
             weekdays: [],
             exceptions: [],
             seats: null,
             luggage: 'none',
-            contact: '',
-            description: ''
+            description: '',
+            ...carpoolDefaults()
           };
           exceptionDate.value = '';
           formError.value = '';
@@ -600,6 +606,11 @@
               throw new Error(error.error || 'Erreur lors de la creation');
             }
             
+            localStorage.setItem('carpool_prefs', JSON.stringify({
+              origin: form.value.origin.trim(),
+              destination: form.value.destination.trim(),
+              contact: form.value.contact.trim()
+            }));
             showToast('Annonce publiee avec succes!');
             closeAddModal();
             loadEntries();

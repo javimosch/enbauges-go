@@ -139,8 +139,8 @@ func (p *Carpool) Mount(mux *http.ServeMux, ctx *plugin.Context) error {
 			plugin.WriteErr(w, 400, "Le titre doit faire moins de 200 caracteres")
 			return
 		}
-		date, err := time.Parse(time.RFC3339, in.Date)
-		if err != nil {
+		date, ok := plugin.ParseDate(in.Date)
+		if !ok {
 			plugin.WriteErr(w, 400, "La date est requise")
 			return
 		}
@@ -167,7 +167,7 @@ func (p *Carpool) Mount(mux *http.ServeMux, ctx *plugin.Context) error {
 		if freq == "weekdays" {
 			e.Weekdays = in.Weekdays
 			for _, x := range in.Exceptions {
-				if t, err := time.Parse(time.RFC3339, x); err == nil {
+				if t, ok := plugin.ParseDate(x); ok {
 					e.Exceptions = append(e.Exceptions, t)
 				}
 			}

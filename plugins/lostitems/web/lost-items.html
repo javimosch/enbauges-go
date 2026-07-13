@@ -104,8 +104,11 @@
             :key="item._id"
             class="enbauges-card"
             :class="[
-              item.status === 'lost' ? 'enbauges-card--actor' : 'enbauges-card--solution'
+              item.status === 'lost' ? 'enbauges-card--actor' : 'enbauges-card--solution',
+              'enbauges-card--hover'
             ]"
+            style="cursor: pointer;"
+            @click="selectedItem = item"
           >
             <div style="padding: 1.25rem;">
               <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem;">
@@ -113,7 +116,7 @@
                   {{ item.status === 'lost' ? 'Perdu' : 'Trouvé' }}
                 </span>
                 <button 
-                  @click="deleteItem(item)"
+                  @click.stop="deleteItem(item)"
                   style="background: none; border: none; cursor: pointer; color: var(--enbauges-brown); padding: 0.25rem;"
                   title="Supprimer"
                 >
@@ -163,6 +166,38 @@
         </div>
       </div>
     </main>
+
+    <div v-if="selectedItem" class="enbauges-modal-backdrop" @click.self="selectedItem = null">
+      <div class="enbauges-modal" style="max-width: 32rem;">
+        <div class="enbauges-modal__header">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span :class="selectedItem.status === 'lost' ? 'enbauges-badge-actor' : 'enbauges-badge-solution'">
+              {{ selectedItem.status === 'lost' ? 'Perdu' : 'Trouvé' }}
+            </span>
+            <button @click="selectedItem = null" style="background: none; border: none; cursor: pointer; padding: 0.5rem;">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="var(--enbauges-brown)">
+                <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+          <h2 class="enbauges-modal__title" style="margin-top: 0.75rem;">{{ selectedItem.title }}</h2>
+        </div>
+        <div class="enbauges-modal__body">
+          <p v-if="selectedItem.description" style="color: var(--enbauges-earth); line-height: 1.6; margin-bottom: 1rem; white-space: pre-wrap;">{{ selectedItem.description }}</p>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9375rem; color: var(--enbauges-brown);">
+            <div v-if="selectedItem.location">📍 <strong>Lieu :</strong> {{ selectedItem.location }}</div>
+            <div v-if="selectedItem.dateLost">📅 <strong>Date :</strong> {{ formatDate(selectedItem.dateLost) }}</div>
+            <div v-if="selectedItem.contact">✉ <strong>Contact :</strong> {{ selectedItem.contact }}</div>
+            <div style="font-size: 0.8125rem; color: var(--enbauges-brown-light); margin-top: 0.5rem;">
+              Déclaré le {{ formatDate(selectedItem.createdAt) }}
+            </div>
+          </div>
+          <div v-if="!selectedItem.contact" style="margin-top: 1rem; padding: 0.75rem 1rem; background: var(--enbauges-cream); border-radius: 0.5rem; font-size: 0.875rem; color: var(--enbauges-brown);">
+            Pas de contact indiqué — passez en mairie ou au panneau d'affichage du village.
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div v-if="showAddModal" class="enbauges-modal-backdrop" @click.self="closeAddModal">
       <div class="enbauges-modal">
@@ -311,6 +346,7 @@
         const loading = ref(true);
         const filterStatus = ref('all');
         const showAddModal = ref(false);
+        const selectedItem = ref(null);
         const showDeleteConfirm = ref(false);
         const itemToDelete = ref(null);
         const submitting = ref(false);
@@ -454,6 +490,7 @@
           loading,
           filterStatus,
           showAddModal,
+          selectedItem,
           showDeleteConfirm,
           submitting,
           formError,

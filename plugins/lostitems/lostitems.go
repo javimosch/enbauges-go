@@ -129,7 +129,7 @@ func (p *LostItems) Mount(mux *http.ServeMux, ctx *plugin.Context) error {
 			UpdatedAt:   now,
 		}
 		if in.DateLost != "" {
-			if t, err := time.Parse(time.RFC3339, in.DateLost); err == nil {
+			if t, ok := plugin.ParseDate(in.DateLost); ok {
 				item.DateLost = &t
 			}
 		}

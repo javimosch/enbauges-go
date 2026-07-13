@@ -2,6 +2,8 @@ package main
 
 import (
 	"crypto/subtle"
+
+	"github.com/javimosch/enbauges-go/plugin"
 	"net/http"
 	"strings"
 	"time"
@@ -95,9 +97,9 @@ func handleProposeEvent(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "title or description too long")
 		return
 	}
-	startAt, err1 := time.Parse(time.RFC3339, in.StartAt)
-	endAt, err2 := time.Parse(time.RFC3339, in.EndAt)
-	if err1 != nil || err2 != nil {
+	startAt, ok1 := plugin.ParseDate(in.StartAt)
+	endAt, ok2 := plugin.ParseDate(in.EndAt)
+	if !ok1 || !ok2 {
 		writeErr(w, 400, "startAt and endAt must be ISO 8601 dates")
 		return
 	}

@@ -215,7 +215,7 @@ func (p *OpenPanneau) Mount(mux *http.ServeMux, ctx *plugin.Context) error {
 			UpdatedAt:      now,
 		}
 		if in.ExpiresAt != "" {
-			if t, err := time.Parse(time.RFC3339, in.ExpiresAt); err == nil {
+			if t, ok := plugin.ParseDate(in.ExpiresAt); ok {
 				a.ExpiresAt = &t
 			}
 		}
