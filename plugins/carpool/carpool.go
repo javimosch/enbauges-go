@@ -97,19 +97,19 @@ func (p *Carpool) Mount(mux *http.ServeMux, ctx *plugin.Context) error {
 		dbctx, cancel := plugin.DBCtx(r)
 		defer cancel()
 		var in struct {
-			Title       string   `json:"title"`
-			Type        string   `json:"type"`
-			Origin      string   `json:"origin"`
-			Destination string   `json:"destination"`
-			Date        string   `json:"date"`
-			Time        string   `json:"time"`
-			Frequency   string   `json:"frequency"`
-			Weekdays    []int    `json:"weekdays"`
-			Exceptions  []string `json:"exceptions"`
-			Contact     string   `json:"contact"`
-			Seats       *int     `json:"seats"`
-			Luggage     string   `json:"luggage"`
-			Description string   `json:"description"`
+			Title       string           `json:"title"`
+			Type        string           `json:"type"`
+			Origin      string           `json:"origin"`
+			Destination string           `json:"destination"`
+			Date        string           `json:"date"`
+			Time        string           `json:"time"`
+			Frequency   string           `json:"frequency"`
+			Weekdays    []plugin.FlexInt `json:"weekdays"`
+			Exceptions  []string         `json:"exceptions"`
+			Contact     string           `json:"contact"`
+			Seats       *plugin.FlexInt  `json:"seats"`
+			Luggage     string           `json:"luggage"`
+			Description string           `json:"description"`
 		}
 		if err := plugin.DecodeBody(r, &in); err != nil {
 			plugin.WriteErr(w, 400, "invalid JSON body")
@@ -165,15 +165,16 @@ func (p *Carpool) Mount(mux *http.ServeMux, ctx *plugin.Context) error {
 			UpdatedAt:   now,
 		}
 		if freq == "weekdays" {
-			e.Weekdays = in.Weekdays
+			e.Weekdays = plugin.FlexInts(in.Weekdays)
 			for _, x := range in.Exceptions {
 				if t, ok := plugin.ParseDate(x); ok {
 					e.Exceptions = append(e.Exceptions, t)
 				}
 			}
 		}
-		if in.Type == "offer" && in.Seats != nil && *in.Seats >= 1 && *in.Seats <= 8 {
-			e.Seats = in.Seats
+		if in.Type == "offer" && in.Seats != nil && int(*in.Seats) >= 1 && int(*in.Seats) <= 8 {
+			n := int(*in.Seats)
+			e.Seats = &n
 		}
 		if in.Type == "request" && slices.Contains([]string{"23kg", "10kg_or_less", "small_backpacks", "none"}, in.Luggage) {
 			e.Luggage = in.Luggage

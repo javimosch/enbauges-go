@@ -181,22 +181,22 @@ func (c *Calendar) get(w http.ResponseWriter, r *http.Request, ctx *plugin.Conte
 }
 
 type entryInput struct {
-	Title       *string  `json:"title"`
-	Description *string  `json:"description"`
-	Type        *string  `json:"type"`
-	StartDate   *string  `json:"startDate"`
-	EndDate     *string  `json:"endDate"`
-	Frequency   *string  `json:"frequency"`
-	Weekdays    []int    `json:"weekdays"`
-	MonthDays   []int    `json:"monthDays"`
-	Exceptions  []string `json:"exceptions"`
-	Location    *string  `json:"location"`
-	Organizer   *string  `json:"organizer"`
-	Contact     *string  `json:"contact"`
-	URL         *string  `json:"url"`
-	Tags        []string `json:"tags"`
-	VoterID     string   `json:"voterId"`
-	Content     string   `json:"content"`
+	Title       *string          `json:"title"`
+	Description *string          `json:"description"`
+	Type        *string          `json:"type"`
+	StartDate   *string          `json:"startDate"`
+	EndDate     *string          `json:"endDate"`
+	Frequency   *string          `json:"frequency"`
+	Weekdays    []plugin.FlexInt `json:"weekdays"`
+	MonthDays   []plugin.FlexInt `json:"monthDays"`
+	Exceptions  []string         `json:"exceptions"`
+	Location    *string          `json:"location"`
+	Organizer   *string          `json:"organizer"`
+	Contact     *string          `json:"contact"`
+	URL         *string          `json:"url"`
+	Tags        []string         `json:"tags"`
+	VoterID     string           `json:"voterId"`
+	Content     string           `json:"content"`
 }
 
 func parseDates(vals []string) []time.Time {
@@ -277,10 +277,10 @@ func (c *Calendar) create(w http.ResponseWriter, r *http.Request, ctx *plugin.Co
 		}
 	}
 	if freq == "weekly" {
-		e.Weekdays = in.Weekdays
+		e.Weekdays = plugin.FlexInts(in.Weekdays)
 	}
 	if freq == "monthly" {
-		e.MonthDays = in.MonthDays
+		e.MonthDays = plugin.FlexInts(in.MonthDays)
 	}
 	e.Exceptions = parseDates(in.Exceptions)
 	for _, t := range in.Tags {
@@ -333,10 +333,10 @@ func (c *Calendar) update(w http.ResponseWriter, r *http.Request, ctx *plugin.Co
 		set["frequency"] = str(in.Frequency)
 	}
 	if in.Weekdays != nil {
-		set["weekdays"] = in.Weekdays
+		set["weekdays"] = plugin.FlexInts(in.Weekdays)
 	}
 	if in.MonthDays != nil {
-		set["monthDays"] = in.MonthDays
+		set["monthDays"] = plugin.FlexInts(in.MonthDays)
 	}
 	if in.Exceptions != nil {
 		set["exceptions"] = parseDates(in.Exceptions)

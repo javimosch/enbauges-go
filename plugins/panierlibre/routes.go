@@ -38,8 +38,8 @@ type reqInput struct {
 	StartDate     *string `json:"startDate"`
 	EndDate       *string `json:"endDate"`
 	Items         []struct {
-		Key      string  `json:"key"`
-		Quantity float64 `json:"quantity"`
+		Key      string         `json:"key"`
+		Quantity plugin.FlexInt `json:"quantity"`
 	} `json:"items"`
 	ExtraNotes *string `json:"extraNotes"`
 	OwnerEmail string  `json:"ownerEmail"`
