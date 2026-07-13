@@ -10,6 +10,7 @@ import (
 	"github.com/javimosch/enbauges-go/plugins/interactivemap"
 	"github.com/javimosch/enbauges-go/plugins/ircchat"
 	"github.com/javimosch/enbauges-go/plugins/lostitems"
+	"github.com/javimosch/enbauges-go/plugins/openpanneau"
 	"github.com/javimosch/enbauges-go/plugins/panierlibre"
 )
 
@@ -20,6 +21,7 @@ func All() []plugin.Plugin {
 		interactivemap.New(),
 		ircchat.New(),
 		lostitems.New(),
+		openpanneau.New(),
 		panierlibre.New(),
 	}
 }

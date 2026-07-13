@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Panneau - Enbauges</title>
+  <meta name="description" content="Alternative libre et gratuite à Panneau Pocket - Informez les habitants de votre commune">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css">
+  <link href="/css/enbauges.css" rel="stylesheet">
+  <link href="/plugin-static/open-panneau/open-panneau.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+  <style>
+    [v-cloak] { display: none; }
+    body { background: var(--enbauges-cream); }
+  </style>
+</head>
+<body>
+  <div id="app" v-cloak>
+
+    <!-- Toast -->
+    <div v-if="toast.visible" class="op-toast" :class="{ 'op-toast--out': toast.leaving }">
+      <div class="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium" :class="toast.bgClass">
+        <span>{{ toast.message }}</span>
+        <button @click="dismissToast" class="op-toast__close">&times;</button>
+      </div>
+    </div>
+
+    <!-- Confirm Dialog -->
+    <div v-if="confirm.show" class="op-confirm-overlay" @click.self="confirm.show = false">
+      <div class="op-confirm-box">
+        <p class="text-sm text-gray-700 mb-4">{{ confirm.message }}</p>
+        <div class="flex gap-2 justify-end">
+          <button @click="confirm.show = false" class="btn btn-sm btn-ghost">Annuler</button>
+          <button @click="confirm.onConfirm(); confirm.show = false" class="btn btn-sm" :class="confirm.btnClass">Confirmer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="op-header">
+      <div class="op-container">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="text-center sm:text-left">
+            <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold mb-1">Open Panneau</h1>
+            <p class="text-white/90 text-base sm:text-lg">Alternative libre et gratuite &agrave; Panneau Pocket</p>
+            <p class="text-white/70 text-xs sm:text-sm mt-1">Informez les habitants de votre commune &mdash; Sans publicit&eacute;, sans tracking</p>
+          </div>
+          <a href="/" class="btn btn-ghost text-white border border-white/20 hover:bg-white/10 text-sm">&larr; Retour au canvas</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="op-container py-4 sm:py-6">
+      <div class="grid md:grid-cols-3 gap-4 sm:gap-6 items-start">
+        <div class="md:col-span-2 space-y-4">
+          <div class="op-card p-3 sm:p-4">
+            <h2 class="text-lg sm:text-xl font-semibold mb-3" style="color: var(--enbauges-earth);">Fil d'annonces</h2>
+            <div class="flex flex-wrap gap-2 mb-4">
+              <select v-model="selectedMunicipality" @change="fetchAnnouncements" class="select select-bordered select-sm flex-1 min-w-[130px] sm:min-w-[150px]">
+                <option value="">Toutes les communes</option>
+                <option v-for="m in municipalities" :key="m._id" :value="m._id">{{ m.name }}</option>
+              </select>
+              <select v-model="selectedType" @change="fetchAnnouncements" class="select select-bordered select-sm flex-1 min-w-[110px] sm:min-w-[120px]">
+                <option value="">Tous les types</option>
+                <option v-for="t in types" :key="t.value" :value="t.value">{{ t.label }}</option>
+              </select>
+              <button @click="resetFilters" class="btn btn-sm btn-ghost text-xs">
+                R&eacute;initialiser
+              </button>
+            </div>
+
+            <!-- Skeleton loading -->
+            <div v-if="loading" class="space-y-3">
+              <div v-for="n in 3" :key="n" class="p-4 rounded-xl border border-[var(--enbauges-brown-light)]">
+                <div class="flex gap-2 mb-2">
+                  <div class="op-skeleton h-5 w-20"></div>
+                  <div class="op-skeleton h-5 w-28"></div>
+                </div>
+                <div class="op-skeleton h-6 w-3/4 mb-2"></div>
+                <div class="op-skeleton h-4 w-full mb-1"></div>
+                <div class="op-skeleton h-4 w-2/3"></div>
+              </div>
+            </div>
+
+            <!-- Empty state -->
+            <div v-else-if="filteredAnnouncements.length === 0" class="op-empty-state">
+              <svg class="op-empty-state__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+              <p class="font-medium">Aucune annonce pour le moment.</p>
+              <p class="text-sm mt-1">Les communes actives publieront leurs informations ici.</p>
+            </div>
+
+            <!-- Announcements list -->
+            <div v-else class="space-y-3">
+              <div v-for="ann in filteredAnnouncements" :key="ann._id"
+                   class="announcement-card op-card p-3 sm:p-4 border-l-4"
+                   :class="{ 'border-[var(--enbauges-terracotta)]': ann.type === 'alert', 'border-[var(--enbauges-sage)]': ann.type === 'event', 'border-[var(--enbauges-amber)]': ann.type === 'warning', 'border-[#6B8DB5]': ann.type === 'info' }">
+                <div class="flex items-start justify-between mb-2 gap-2">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="op-type-badge" :class="getTypeBadgeClass(ann.type)">{{ getTypeLabel(ann.type) }}</span>
+                    <span class="font-semibold text-sm" style="color: var(--enbauges-earth);">
+                      {{ ann.municipalityId?.name || 'Commune' }}
+                    </span>
+                  </div>
+                  <span class="text-xs text-gray-500 whitespace-nowrap">{{ formatDate(ann.createdAt) }}</span>
+                </div>
+                <h3 class="font-semibold text-base sm:text-lg mb-1">{{ ann.title }}</h3>
+                <p class="text-sm sm:text-base text-gray-700 whitespace-pre-wrap">{{ ann.content }}</p>
+                <div v-if="ann.expiresAt" class="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  Expire le {{ formatDate(ann.expiresAt) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-4">
+
+          <!-- Not logged in -->
+          <div v-if="!currentMunicipality" class="op-card p-4">
+            <h3 class="font-semibold mb-3" style="color: var(--enbauges-earth);">Espace mairie</h3>
+            <div class="space-y-2">
+              <button @click="showLogin = true" class="btn w-full" style="background: var(--enbauges-sage); color: white;">
+                Se connecter
+              </button>
+              <button @click="showRegister = true" class="btn btn-outline w-full">
+                S'inscrire
+              </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-3 leading-relaxed">
+              Inscription gratuite pour les communes. Votre compte sera valid&eacute; avant publication.
+            </p>
+          </div>
+
+          <!-- Logged in -->
+          <div v-else class="op-card p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-sm sm:text-base truncate" style="color: var(--enbauges-earth);">{{ currentMunicipality.name }}</h3>
+              <span v-if="isAdmin" class="badge badge-sm" style="background: var(--enbauges-amber); color: var(--enbauges-earth); border: none;">Admin</span>
+            </div>
+            <div class="space-y-2">
+              <button @click="showPost = true" class="btn w-full" style="background: var(--enbauges-sage); color: white;">
+                + Nouvelle annonce
+              </button>
+              <button @click="fetchMyAnnouncements" class="btn btn-outline w-full text-sm">
+                Mes annonces
+              </button>
+              <button @click="openAdminPanel" class="btn btn-outline w-full text-sm">
+                Administration
+              </button>
+              <button @click="logout" class="btn btn-ghost w-full text-sm text-gray-600">
+                D&eacute;connexion
+              </button>
+            </div>
+          </div>
+
+          <!-- About -->
+          <div class="op-card op-card--soft p-4">
+            <h4 class="font-semibold mb-2 text-sm" style="color: var(--enbauges-earth);">&Agrave; propos</h4>
+            <p class="text-sm text-gray-600 leading-relaxed">
+              Open Panneau est un service <strong>gratuit, anonyme et sans publicit&eacute;</strong> pour les communes.
+            </p>
+            <ul class="text-sm text-gray-600 mt-2 space-y-1">
+              <li v-for="item in aboutItems" :key="item" class="flex items-center gap-1.5"><span class="text-[var(--enbauges-sage)] font-bold">&#10003;</span> {{ item }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Login Modal -->
+    <dialog class="modal" :class="{ 'modal-open': showLogin }">
+      <div class="modal-box max-w-md">
+        <h3 class="font-bold text-lg mb-4">Connexion mairie</h3>
+        <form @submit.prevent="login">
+          <div class="space-y-3">
+            <div>
+              <label class="label text-sm font-medium">Email</label>
+              <input v-model="loginEmail" type="email" class="input input-bordered w-full" required autocomplete="email">
+            </div>
+            <div>
+              <label class="label text-sm font-medium">Code d'acc&egrave;s</label>
+              <input v-model="loginCode" type="password" class="input input-bordered w-full" required autocomplete="current-password">
+            </div>
+            <div v-if="loginError" class="text-sm text-red-600 bg-red-50 rounded-lg p-2.5">{{ loginError }}</div>
+          </div>
+          <div class="modal-action">
+            <button type="button" @click="closeLogin" class="btn btn-ghost">Annuler</button>
+            <button type="submit" class="btn" :disabled="loginLoading" style="background: var(--enbauges-sage); color: white;">
+              <span v-if="loginLoading" class="loading loading-spinner loading-xs"></span>
+              <span v-else>Connexion</span>
+            </button>
+          </div>
+        </form>
+      </div>
+      <div class="modal-backdrop" @click="closeLogin"></div>
+    </dialog>
+
+    <!-- Register Modal -->
+    <dialog class="modal" :class="{ 'modal-open': showRegister }">
+      <div class="modal-box max-w-md">
+        <h3 class="font-bold text-lg mb-4">Inscription mairie</h3>
+        <form @submit.prevent="register">
+          <div class="space-y-3">
+            <div>
+              <label class="label text-sm font-medium">Nom de la commune *</label>
+              <input v-model="regName" type="text" class="input input-bordered w-full" required>
+            </div>
+            <div>
+              <label class="label text-sm font-medium">Email de contact *</label>
+              <input v-model="regEmail" type="email" class="input input-bordered w-full" required>
+            </div>
+            <div>
+              <label class="label text-sm font-medium">Code d'acc&egrave;s (min 6 caract&egrave;res) *</label>
+              <input v-model="regCode" type="password" class="input input-bordered w-full" minlength="6" required>
+              <span class="text-xs text-gray-500 mt-1 block">Ce code vous servira pour publier des annonces</span>
+            </div>
+            <div>
+              <label class="label text-sm font-medium">Nom du contact</label>
+              <input v-model="regContactName" type="text" class="input input-bordered w-full">
+            </div>
+            <div>
+              <label class="label text-sm font-medium">T&eacute;l&eacute;phone</label>
+              <input v-model="regPhone" type="tel" class="input input-bordered w-full">
+            </div>
+            <div>
+              <label class="label text-sm font-medium">Code INSEE (optionnel)</label>
+              <input v-model="regInsee" type="text" class="input input-bordered w-full" maxlength="10">
+            </div>
+          </div>
+          <div class="modal-action">
+            <button type="button" @click="showRegister = false" class="btn btn-ghost">Annuler</button>
+            <button type="submit" class="btn" :disabled="regLoading" style="background: var(--enbauges-sage); color: white;">
+              <span v-if="regLoading" class="loading loading-spinner loading-xs"></span>
+              <span v-else>S'inscrire</span>
+            </button>
+          </div>
+        </form>
+      </div>
+      <div class="modal-backdrop" @click="showRegister = false"></div>
+    </dialog>
+
+    <!-- Post Announcement Modal -->
+    <dialog class="modal" :class="{ 'modal-open': showPost }">
+      <div class="modal-box max-w-lg">
+        <h3 class="font-bold text-lg mb-4">Nouvelle annonce</h3>
+        <form @submit.prevent="postAnnouncement">
+          <div class="space-y-3">
+            <div>
+              <label class="label text-sm font-medium">Titre *</label>
+              <input v-model="postTitle" type="text" class="input input-bordered w-full" maxlength="200" required>
+            </div>
+            <div>
+              <label class="label text-sm font-medium">Type</label>
+              <select v-model="postType" class="select select-bordered w-full">
+                <option v-for="t in types" :key="t.value" :value="t.value">{{ t.label }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="label text-sm font-medium">Contenu *</label>
+              <textarea v-model="postContent" class="textarea textarea-bordered w-full" rows="5" maxlength="2000" required></textarea>
+              <div class="flex justify-end mt-1">
+                <span class="text-xs" :class="postContent.length > 1800 ? 'text-amber-600 font-medium' : 'text-gray-500'">{{ postContent.length }}/2000</span>
+              </div>
+            </div>
+            <div>
+              <label class="label text-sm font-medium">Date d'expiration (optionnel)</label>
+              <input v-model="postExpires" type="datetime-local" class="input input-bordered w-full">
+            </div>
+          </div>
+          <div class="modal-action">
+            <button type="button" @click="showPost = false" class="btn btn-ghost">Annuler</button>
+            <button type="submit" class="btn" :disabled="postLoading" style="background: var(--enbauges-sage); color: white;">
+              <span v-if="postLoading" class="loading loading-spinner loading-xs"></span>
+              <span v-else>Publier</span>
+            </button>
+          </div>
+        </form>
+      </div>
+      <div class="modal-backdrop" @click="showPost = false"></div>
+    </dialog>
+
+    <!-- My Announcements Modal -->
+    <dialog class="modal" :class="{ 'modal-open': myAnnouncements.length > 0 && !showPost && !showAdmin }">
+      <div class="modal-box max-w-2xl max-h-[80vh] overflow-y-auto">
+        <h3 class="font-bold text-lg mb-4">Mes annonces</h3>
+        <div v-if="myAnnouncements.length === 0" class="op-empty-state">
+          <p>Vous n'avez pas encore publi&eacute; d'annonces.</p>
+        </div>
+        <div v-else class="space-y-3">
+          <div v-for="ann in myAnnouncements" :key="ann._id"
+               class="op-card p-3"
+               :class="{ 'opacity-50': !ann.isActive || isExpired(ann) }">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span class="op-type-badge text-xs py-0 px-2" :class="getTypeBadgeClass(ann.type)">{{ getTypeLabel(ann.type) }}</span>
+                  <span v-if="!ann.isActive" class="badge badge-ghost badge-sm">Supprim&eacute;e</span>
+                  <span v-else-if="isExpired(ann)" class="badge badge-warning badge-sm">Expir&eacute;e</span>
+                </div>
+                <h4 class="font-medium text-sm truncate">{{ ann.title }}</h4>
+                <p class="text-sm text-gray-600 line-clamp-2">{{ ann.content }}</p>
+                <span class="text-xs text-gray-500">{{ formatDate(ann.createdAt) }}</span>
+              </div>
+              <button v-if="ann.isActive && !isExpired(ann)"
+                      @click="confirmDelete(ann._id)"
+                      class="btn btn-ghost btn-sm text-error flex-shrink-0">
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-action">
+          <button @click="myAnnouncements = []" class="btn">Fermer</button>
+        </div>
+      </div>
+      <div class="modal-backdrop" @click="myAnnouncements = []"></div>
+    </dialog>
+
+    <!-- Admin Modal -->
+    <dialog class="modal" :class="{ 'modal-open': showAdmin }">
+      <div class="modal-box max-w-4xl max-h-[85vh] overflow-y-auto p-0">
+        <div class="p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg" style="color: var(--enbauges-earth);">Administration</h3>
+            <button @click="showAdmin = false; adminFilter = ''" class="btn btn-sm btn-ghost text-gray-500">&times;</button>
+          </div>
+
+          <!-- Not authenticated -->
+          <div v-if="!adminAuth.username && !adminAuthFromLogin" class="op-card--soft p-4 rounded-xl">
+            <p class="text-sm text-gray-600 mb-3">Connectez-vous en tant que superadmin pour g&eacute;rer les communes.</p>
+            <div class="flex flex-col sm:flex-row gap-2 items-end">
+              <div class="flex-1 w-full">
+                <label class="label text-xs font-medium text-gray-600">Nom d'utilisateur</label>
+                <input v-model="adminUsername" type="text" class="input input-bordered input-sm w-full" placeholder="admin" @keyup.enter="loginAdmin">
+              </div>
+              <div class="flex-1 w-full">
+                <label class="label text-xs font-medium text-gray-600">Mot de passe</label>
+                <input v-model="adminPassword" type="password" class="input input-bordered input-sm w-full" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;" @keyup.enter="loginAdmin">
+              </div>
+              <button @click="loginAdmin" class="btn btn-sm w-full sm:w-auto flex-shrink-0" :disabled="adminLoading" style="background: var(--enbauges-sage); color: white;">
+                <span v-if="adminLoading" class="loading loading-spinner loading-xs"></span>
+                <span v-else>Se connecter</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Authenticated -->
+          <div v-if="adminAuth.username || adminAuthFromLogin">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-sm text-gray-600">
+                Connect&eacute; en tant que <strong>{{ adminAuth.username || currentMunicipality?.name }}</strong>
+              </p>
+              <button @click="logoutAdmin" class="btn btn-ghost btn-xs text-gray-500">D&eacute;connexion</button>
+            </div>
+
+            <!-- Stats -->
+            <div v-if="adminMunicipalities.length > 0" class="op-admin-stats mb-4">
+              <div v-for="s in adminStatCards" :key="s.label" class="op-stat-card">
+                <div class="op-stat-card__value" :style="{ color: s.color }">{{ s.value }}</div>
+                <div class="op-stat-card__label">{{ s.label }}</div>
+              </div>
+            </div>
+
+            <!-- Search & Filters -->
+            <div v-if="adminMunicipalities.length > 0" class="flex flex-col sm:flex-row gap-2 mb-3 items-start sm:items-center">
+              <div class="flex-1 w-full sm:w-auto">
+                <input v-model="adminSearch" type="text" class="input input-bordered input-sm w-full" placeholder="Rechercher une commune...">
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                <button v-for="f in adminFilters" :key="f.value" @click="adminFilter = f.value" class="op-admin-filter-btn" :class="{ 'op-admin-filter-btn--active': adminFilter === f.value }">{{ f.label }}</button>
+              </div>
+            </div>
+
+            <!-- Municipalities Table (Desktop) -->
+            <div v-if="adminMunicipalities.length > 0" class="op-admin-table-desktop">
+              <div class="op-admin-table-wrap">
+                <table class="table table-sm w-full">
+                  <thead>
+                    <tr>
+                      <th class="text-xs">Nom</th>
+                      <th class="text-xs">Email</th>
+                      <th class="text-xs">Contact</th>
+                      <th class="text-xs">Statut</th>
+                      <th class="text-xs">Annonces</th>
+                      <th class="text-xs">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="m in filteredAdminMunicipalities" :key="m._id" class="hover">
+                      <td class="font-medium text-sm">{{ m.name }}</td>
+                      <td class="text-xs text-gray-600">{{ m.email }}</td>
+                      <td class="text-xs text-gray-600">
+                        {{ m.contactName || '-' }}<br v-if="m.contactPhone"><span class="text-gray-500">{{ m.contactPhone || '' }}</span>
+                      </td>
+                      <td>
+                        <span class="badge badge-sm"
+                              :class="{
+                                'badge-warning': m.status === 'pending',
+                                'badge-success': m.status === 'active',
+                                'badge-error': m.status === 'disabled'
+                              }">
+                          {{ statusLabel(m.status) }}
+                        </span>
+                      </td>
+                      <td class="text-xs text-gray-500">
+                        <span v-if="m._count?.announcements != null">{{ m._count.announcements }}</span>
+                        <span v-else>-</span>
+                      </td>
+                      <td>
+                        <div class="flex gap-1">
+                          <button v-if="m.status === 'pending'"
+                                  @click="confirmedAction(`Activer ${m.name} ?`, () => updateMunicipalityStatus(m._id, 'active'), 'btn-success')"
+                                  class="btn btn-xs btn-success">Activer</button>
+                          <button v-if="m.status === 'active'"
+                                  @click="confirmedAction(`D&eacute;sactiver ${m.name} ? Cette commune ne pourra plus publier.`, () => updateMunicipalityStatus(m._id, 'disabled'), 'btn-error')"
+                                  class="btn btn-xs btn-error">D&eacute;sactiver</button>
+                          <button v-if="m.status === 'disabled'"
+                                  @click="confirmedAction(`R&eacute;activer ${m.name} ?`, () => updateMunicipalityStatus(m._id, 'active'), 'btn-success')"
+                                  class="btn btn-xs btn-success">R&eacute;activer</button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Municipalities Cards (Mobile) -->
+            <div v-if="adminMunicipalities.length > 0" class="op-admin-table-mobile space-y-2">
+              <div v-for="m in filteredAdminMunicipalities" :key="m._id"
+                   class="bg-white border border-[var(--enbauges-brown-light)] rounded-xl p-3">
+                <div class="flex items-start justify-between mb-2">
+                  <div>
+                    <p class="font-medium text-sm">{{ m.name }}</p>
+                    <p class="text-xs text-gray-500">{{ m.email }}</p>
+                  </div>
+                  <span class="badge badge-sm"
+                        :class="{
+                          'badge-warning': m.status === 'pending',
+                          'badge-success': m.status === 'active',
+                          'badge-error': m.status === 'disabled'
+                        }">
+                    {{ statusLabel(m.status) }}
+                  </span>
+                </div>
+                <p v-if="m.contactName || m.contactPhone" class="text-xs text-gray-500 mb-2">
+                  {{ m.contactName || '-' }}{{ m.contactPhone ? ' — ' + m.contactPhone : '' }}
+                </p>
+                <div class="flex gap-1.5">
+                  <button v-if="m.status === 'pending'"
+                          @click="confirmedAction(`Activer ${m.name} ?`, () => updateMunicipalityStatus(m._id, 'active'), 'btn-success')"
+                          class="btn btn-xs btn-success flex-1">Activer</button>
+                  <button v-if="m.status === 'active'"
+                          @click="confirmedAction(`D&eacute;sactiver ${m.name} ?`, () => updateMunicipalityStatus(m._id, 'disabled'), 'btn-error')"
+                          class="btn btn-xs btn-error flex-1">D&eacute;sactiver</button>
+                  <button v-if="m.status === 'disabled'"
+                          @click="confirmedAction(`R&eacute;activer ${m.name} ?`, () => updateMunicipalityStatus(m._id, 'active'), 'btn-success')"
+                          class="btn btn-xs btn-success flex-1">R&eacute;activer</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Loading & empty states -->
+            <div v-if="adminMunicipalityLoading" class="text-center py-8">
+              <span class="loading loading-spinner loading-md" style="color: var(--enbauges-sage);"></span>
+            </div>
+            <div v-else-if="adminMunicipalities.length === 0" class="text-center py-6 text-gray-500 text-sm">
+              Aucune commune trouv&eacute;e.
+            </div>
+
+            <!-- Admin: Annonces section -->
+            <div v-if="adminMunicipalities.length > 0" class="mt-6 pt-4 border-t border-[var(--enbauges-brown-light)]">
+              <h4 class="font-semibold text-sm mb-3" style="color: var(--enbauges-earth);">Toutes les annonces</h4>
+
+              <div class="flex flex-col sm:flex-row gap-2 mb-3">
+                <select v-model="adminAnnFilterMun" class="select select-bordered select-sm flex-1">
+                  <option value="">Toutes les communes</option>
+                  <option v-for="m in adminMunicipalities" :key="m._id" :value="m._id">{{ m.name }}</option>
+                </select>
+                <button @click="fetchAdminAnnouncements" class="btn btn-sm btn-ghost text-xs">
+                  Actualiser
+                </button>
+              </div>
+
+              <div v-if="adminAnnLoading" class="text-center py-4">
+                <span class="loading loading-spinner loading-xs" style="color: var(--enbauges-sage);"></span>
+              </div>
+
+              <div v-else-if="adminAnnouncementsFiltered.length === 0" class="text-center py-4 text-gray-500 text-xs">
+                Aucune annonce trouv&eacute;e.
+              </div>
+
+              <div v-else class="space-y-2">
+                <div v-for="ann in adminAnnouncementsFiltered" :key="ann._id"
+                     class="op-admin-ann-card flex items-start justify-between gap-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                      <span class="op-type-badge text-[0.65rem] py-0 px-1.5" :class="getTypeBadgeClass(ann.type)">{{ getTypeLabel(ann.type) }}</span>
+                      <span class="text-xs text-gray-500 font-medium">{{ ann.municipalityId?.name || '—' }}</span>
+                      <span class="text-[0.6rem] text-gray-400">{{ formatDate(ann.createdAt) }}</span>
+                    </div>
+                    <p class="text-sm font-medium truncate">{{ ann.title }}</p>
+                    <p class="text-xs text-gray-600 line-clamp-1">{{ ann.content }}</p>
+                  </div>
+                  <button @click="confirmAdminDelete(ann._id)"
+                          class="btn btn-ghost btn-xs text-error flex-shrink-0">
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 p-4 sm:p-6 border-t border-[var(--enbauges-brown-light)]">
+          <button @click="showAdmin = false; adminFilter = ''" class="btn btn-sm">Fermer</button>
+        </div>
+      </div>
+      <div class="modal-backdrop" @click="showAdmin = false; adminFilter = ''"></div>
+    </dialog>
+
+  </div>
+
+  <script src="/plugin-static/open-panneau/open-panneau.js"></script>
+</body>
+</html>

@@ -74,8 +74,11 @@ vérif bidirectionnelle passée, commit.
     (pas de sha256 contrairement à l'hypothèse du plan) — comportement
     préservé pour la compat ; hachage à traiter comme migration coordonnée
     après le retrait de Node.
-  - `open-panneau` : restant. Auth mairie sha256 réelle + superadmin Basic
-    auth (T2).
+  - `open-panneau` ✔ (2026-07-13) — porté avec T2 (`plugin.SHA256Hex`,
+    `plugin.CheckBasicAuth`). Interop des credentials vérifiée : les hashs
+    sha256 créés par une app s'authentifient dans l'autre. Règles préservées :
+    1re commune auto-activée = admin, superadmin Basic auth, soft-delete des
+    annonces, filtre d'expiration, populate des refs commune.
 - **Vague 4 — le dépendant** : `anomalies-map` (T1 requis).
   Dernier car il impose la brique assets.
 

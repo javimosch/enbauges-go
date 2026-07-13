@@ -2,6 +2,9 @@ package plugin
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -23,6 +26,26 @@ func WriteErr(w http.ResponseWriter, status int, msg string) {
 func DecodeBody(r *http.Request, v any) error {
 	defer r.Body.Close()
 	return json.NewDecoder(http.MaxBytesReader(nil, r.Body, 1<<20)).Decode(v)
+}
+
+// SHA256Hex hashes a secret the way the Node plugins do
+// (crypto.createHash('sha256').update(s).digest('hex')), so credentials
+// created by either app verify in the other.
+func SHA256Hex(s string) string {
+	sum := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(sum[:])
+}
+
+// CheckBasicAuth reports whether the request carries HTTP Basic credentials
+// matching user/pass (constant-time). False when user or pass is empty.
+func CheckBasicAuth(r *http.Request, user, pass string) bool {
+	if user == "" || pass == "" {
+		return false
+	}
+	u, p, ok := r.BasicAuth()
+	return ok &&
+		subtle.ConstantTimeCompare([]byte(u), []byte(user)) == 1 &&
+		subtle.ConstantTimeCompare([]byte(p), []byte(pass)) == 1
 }
 
 // DBCtx returns a 5s-bounded context for a request's database work.
