@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendrier Partage - Enbauges</title>
+  <meta name="description" content="Partagez et decouvrez les evenements du territoire">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css">
+  <link href="/css/enbauges.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div v-if="toast.show" class="enbauges-toast" :class="'enbauges-toast--' + toast.type">
+      {{ toast.message }}
+    </div>
+
+    <nav class="enbauges-navbar">
+      <div class="enbauges-container">
+        <div class="navbar-content" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 0;">
+          <a href="/" class="enbauges-brand" style="text-decoration: none; cursor: pointer;">
+            <svg class="enbauges-brand__logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="16" cy="16" r="14" fill="#7A9E7E"/>
+              <path d="M16 8C12 8 8 12 8 16C8 20 12 24 16 24C20 24 24 20 24 16" stroke="#FAF7F2" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16 8C20 8 24 12 24 16C24 20 20 24 16 24" stroke="#D4A03C" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="16" cy="16" r="3" fill="#FAF7F2"/>
+            </svg>
+            <span style="font-weight: 700; font-size: 1.125rem; color: var(--enbauges-earth);">Enbauges</span>
+          </a>
+          <div style="display: flex; gap: 0.75rem;">
+            <a href="/" class="enbauges-btn-secondary" style="text-decoration: none;">
+              ← Canvas
+            </a>
+            <button class="enbauges-btn-primary" @click="showAddModal = true">
+              + Ajouter
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="enbauges-main">
+      <div class="enbauges-container" style="padding-top: 1.5rem; padding-bottom: 2rem;">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--enbauges-earth); margin-bottom: 0.25rem;">
+            Calendrier Partage
+          </h1>
+          <p style="color: var(--enbauges-brown); font-size: 0.9375rem;">
+            Decouvrez et partagez les evenements du territoire
+          </p>
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;">
+          <button 
+            class="enbauges-filter-toggle"
+            :class="{ 'enbauges-filter-toggle--active': viewMode === 'grid' }"
+            @click="viewMode = 'grid'"
+            type="button"
+          >
+            Grille
+          </button>
+          <button 
+            class="enbauges-filter-toggle"
+            :class="{ 'enbauges-filter-toggle--active': viewMode === 'list' }"
+            @click="viewMode = 'list'"
+            type="button"
+          >
+            Liste
+          </button>
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;">
+          <button 
+            class="enbauges-filter-toggle"
+            :class="{ 'enbauges-filter-toggle--active': filterType === 'all' }"
+            @click="filterType = 'all'"
+            type="button"
+          >
+            Tous
+          </button>
+          <button 
+            class="enbauges-filter-toggle enbauges-filter-toggle--solution"
+            :class="{ 'enbauges-filter-toggle--active': filterType === 'event' }"
+            @click="filterType = 'event'"
+            type="button"
+          >
+            Evenements
+          </button>
+          <button 
+            class="enbauges-filter-toggle enbauges-filter-toggle--initiative"
+            :class="{ 'enbauges-filter-toggle--active': filterType === 'template' }"
+            @click="filterType = 'template'"
+            type="button"
+          >
+            Modeles
+          </button>
+        </div>
+
+        <div v-if="loading" style="text-align: center; padding: 4rem;">
+          <div style="color: var(--enbauges-sage); font-weight: 500;">Chargement...</div>
+        </div>
+
+        <div v-else-if="filteredEntries.length === 0" class="enbauges-empty-state">
+          <svg class="enbauges-empty-state__icon" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="60" cy="60" r="50" fill="#7A9E7E" opacity="0.2"/>
+            <rect x="30" y="35" width="60" height="50" rx="4" stroke="#7A9E7E" stroke-width="3" fill="none"/>
+            <path d="M30 50h60M45 30v10M75 30v10" stroke="#7A9E7E" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          <h2 class="enbauges-empty-state__title">Aucun evenement</h2>
+          <p class="enbauges-empty-state__text">
+            Ajoutez un evenement ou un modele pour commencer!
+          </p>
+          <button class="enbauges-btn-primary" @click="showAddModal = true">
+            + Ajouter
+          </button>
+        </div>
+
+        <div v-else>
+          <div v-if="viewMode === 'grid'" style="max-width: 800px; margin: 0 auto;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+              <button @click="prevMonth" style="background: none; border: none; cursor: pointer; padding: 0.5rem; color: var(--enbauges-sage);">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <div style="font-weight: 600; color: var(--enbauges-earth); font-size: 1.125rem;">
+                {{ monthName }} {{ currentYear }}
+              </div>
+              <button @click="nextMonth" style="background: none; border: none; cursor: pointer; padding: 0.5rem; color: var(--enbauges-sage);">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: var(--enbauges-cream); border-radius: 0.5rem; overflow: hidden;">
+              <div v-for="day in weekDays" :key="day" style="padding: 0.5rem; text-align: center; font-weight: 600; font-size: 0.75rem; color: var(--enbauges-brown); background: white;">
+                {{ day }}
+              </div>
+              <div 
+                v-for="(day, idx) in calendarDays" 
+                :key="idx"
+                :style="{
+                  padding: '0.5rem',
+                  background: day.isToday ? 'rgba(122, 158, 126, 0.1)' : 'white',
+                  minHeight: '4rem',
+                  cursor: day.date ? 'pointer' : 'default'
+                }"
+                @click="day.date && selectDay(day)"
+              >
+                <div v-if="day.date" style="text-align: center; font-size: 0.875rem; margin-bottom: 0.25rem;" :style="{ color: day.isPast && !day.isToday ? 'var(--enbauges-brown-light)' : 'var(--enbauges-earth)' }">
+                  {{ day.dayNumber }}
+                </div>
+                <div v-if="day.isToday" style="text-align: center; font-size: 0.625rem; color: var(--enbauges-sage); font-weight: 600;">Aujourd'hui</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; margin-top: 0.25rem;">
+                  <span 
+                    v-for="entry in day.entries.slice(0, 3)" 
+                    :key="entry._id"
+                    :style="{
+                      width: '6px', 
+                      height: '6px', 
+                      borderRadius: '50%',
+                      background: entry.type === 'event' ? 'var(--enbauges-sage)' : 'var(--enbauges-amber)',
+                    }"
+                    :title="entry.title"
+                  ></span>
+                  <span v-if="day.entries.length > 3" style="font-size: 0.625rem; color: var(--enbauges-brown);">
+                    +{{ day.entries.length - 3 }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="enbauges-grid">
+            <div 
+              v-for="entry in filteredEntries" 
+              :key="entry._id"
+              class="enbauges-card"
+              :class="entry.type === 'event' ? 'enbauges-card--solution' : 'enbauges-card--initiative'"
+              style="cursor: pointer;"
+              @click="openEntryDetail(entry)"
+            >
+              <div style="padding: 1.25rem;">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.5rem;">
+                  <span :class="entry.type === 'event' ? 'enbauges-badge-solution' : 'enbauges-badge-initiative'">
+                    {{ entry.type === 'event' ? 'Evenement' : 'Modele' }}
+                  </span>
+                  <button @click.stop="toggleVote(entry)" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem; color: hasVoted(entry) ? 'var(--enbauges-amber)' : 'var(--enbauges-brown);'">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M8 2l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4l2-4z"/>
+                    </svg>
+                    <span style="font-size: 0.875rem;">{{ entry.votes || 0 }}</span>
+                  </button>
+                </div>
+                
+                <h3 style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.5rem; font-size: 1rem;">
+                  {{ entry.title }}
+                </h3>
+                
+                <div style="font-size: 0.8125rem; color: var(--enbauges-brown); margin-bottom: 0.5rem;">
+                  <span v-if="entry.frequency === 'one-time'">{{ formatDate(entry.startDate) }}</span>
+                  <span v-else-if="entry.frequency === 'weekly'">Hebdomadaire: {{ formatWeekdays(entry.weekdays) }}</span>
+                  <span v-else-if="entry.frequency === 'monthly'">Mensuel: {{ formatMonthDays(entry.monthDays) }}</span>
+                  <span v-if="entry.endDate"> - {{ formatDate(entry.endDate) }}</span>
+                </div>
+                
+                <div v-if="entry.location" style="font-size: 0.8125rem; color: var(--enbauges-brown); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.25rem;">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                    <path d="M7 1a4 4 0 014 4c0 3-4 8-4 8S3 8 3 5a4 4 0 014-4z"/>
+                    <circle cx="7" cy="5" r="1.5"/>
+                  </svg>
+                  {{ entry.location }}
+                </div>
+                
+                <div v-if="entry.organizer" style="font-size: 0.8125rem; color: var(--enbauges-brown); margin-bottom: 0.5rem;">
+                  Organise par: {{ entry.organizer }}
+                </div>
+                
+                <div v-if="entry.description" style="font-size: 0.875rem; color: var(--enbauges-brown); margin-bottom: 0.75rem; line-height: 1.5;">
+                  {{ truncate(entry.description, 100) }}
+                </div>
+                
+                <div v-if="entry.tags && entry.tags.length" style="display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.75rem;">
+                  <span v-for="tag in entry.tags" :key="tag" style="font-size: 0.75rem; padding: 0.125rem 0.5rem; background: var(--enbauges-cream); border-radius: 1rem; color: var(--enbauges-brown);">
+                    {{ tag }}
+                  </span>
+                </div>
+                
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                  <button v-if="entry.url" @click.stop="openUrl(entry.url)" class="enbauges-btn-secondary" style="padding: 0.375rem 0.75rem; font-size: 0.8125rem;">
+                    Plus d'infos
+                  </button>
+                  <button @click.stop="editEntry(entry)" class="enbauges-btn-secondary" style="padding: 0.375rem 0.75rem; font-size: 0.8125rem;">
+                    Modifier
+                  </button>
+                  <button @click.stop="deleteEntry(entry)" style="background: none; border: none; cursor: pointer; color: var(--enbauges-brown); padding: 0.375rem;">
+                    <svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 4l8 8M4 12l8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div v-if="selectedDay && selectedDay.entries.length > 0" class="enbauges-modal-backdrop" @click.self="selectedDay = null">
+      <div class="enbauges-modal" style="max-width: 24rem;">
+        <div class="enbauges-modal__header">
+          <h2 class="enbauges-modal__title">{{ formatDate(selectedDay.date) }}</h2>
+        </div>
+        <div class="enbauges-modal__body">
+          <div v-for="entry in selectedDay.entries" :key="entry._id" 
+               style="margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--enbauges-cream); cursor: pointer;"
+               @click="openEntryDetail(entry); selectedDay = null;">
+            <div style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.25rem;">{{ entry.title }}</div>
+            <div style="font-size: 0.875rem; color: var(--enbauges-brown); display: flex; align-items: center; gap: 0.5rem;">
+              <span :class="entry.type === 'event' ? 'enbauges-badge-solution' : 'enbauges-badge-initiative'" style="font-size: 0.75rem;">
+                {{ entry.type === 'event' ? 'Evenement' : 'Modele' }}
+              </span>
+              <span v-if="entry.location">{{ entry.location }}</span>
+              <span v-if="entry.organizer">- {{ entry.organizer }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="selectedEntry" class="enbauges-modal-backdrop" @click.self="closeEntryDetail">
+      <div class="enbauges-modal" style="max-width: 28rem; max-height: 90vh; overflow-y: auto;">
+        <div class="enbauges-modal__header" style="display: flex; align-items: center; justify-content: space-between;">
+          <h2 class="enbauges-modal__title" style="font-size: 1.125rem;">{{ selectedEntry.title }}</h2>
+          <button @click="closeEntryDetail" style="background: none; border: none; cursor: pointer; padding: 0.5rem; color: var(--enbauges-brown);">
+            <svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 4l8 8M4 12l8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        
+        <div style="display: flex; gap: 0.25rem; padding: 0 1rem 1rem; border-bottom: 1px solid var(--enbauges-cream);">
+          <button 
+            v-for="tab in ['details', 'comments']" 
+            :key="tab"
+            @click="detailTab = tab"
+            :style="{
+              padding: '0.5rem 1rem',
+              border: 'none',
+              borderRadius: '0.5rem',
+              cursor: 'pointer',
+              fontWeight: '500',
+              fontSize: '0.875rem',
+              background: detailTab === tab ? 'var(--enbauges-sage)' : 'transparent',
+              color: detailTab === tab ? 'white' : 'var(--enbauges-brown)'
+            }"
+          >
+            {{ tab === 'details' ? 'Details' : 'Commentaires' }}
+          </button>
+        </div>
+        
+        <div class="enbauges-modal__body" style="padding: 1rem;">
+          <div v-if="detailTab === 'details'">
+            <div style="margin-bottom: 1rem;">
+              <span :class="selectedEntry.type === 'event' ? 'enbauges-badge-solution' : 'enbauges-badge-initiative'">
+                {{ selectedEntry.type === 'event' ? 'Evenement' : 'Modele' }}
+              </span>
+              <span v-if="selectedEntry.votes" style="margin-left: 0.75rem; color: var(--enbauges-amber);">
+                ★ {{ selectedEntry.votes }} votes
+              </span>
+            </div>
+            
+            <div v-if="selectedEntry.description" style="margin-bottom: 1rem;">
+              <div style="font-weight: 500; color: var(--enbauges-earth); margin-bottom: 0.25rem; font-size: 0.875rem;">Description</div>
+              <div style="color: var(--enbauges-brown); font-size: 0.9375rem; line-height: 1.5;">{{ selectedEntry.description }}</div>
+            </div>
+            
+            <div style="display: grid; gap: 0.75rem; font-size: 0.875rem;">
+              <div v-if="selectedEntry.frequency === 'one-time'">
+                <span style="color: var(--enbauges-brown);">Date:</span>
+                <span style="color: var(--enbauges-earth); font-weight: 500;">{{ formatDate(selectedEntry.startDate) }}</span>
+                <span v-if="selectedEntry.endDate"> - {{ formatDate(selectedEntry.endDate) }}</span>
+              </div>
+              <div v-else-if="selectedEntry.frequency === 'weekly'">
+                <span style="color: var(--enbauges-brown);">Jours:</span>
+                <span style="color: var(--enbauges-earth); font-weight: 500;">{{ formatWeekdays(selectedEntry.weekdays) }}</span>
+                <span v-if="selectedEntry.endDate" style="color: var(--enbauges-brown);">jusqu'au {{ formatDate(selectedEntry.endDate) }}</span>
+              </div>
+              <div v-else-if="selectedEntry.frequency === 'monthly'">
+                <span style="color: var(--enbauges-brown);">Jours du mois:</span>
+                <span style="color: var(--enbauges-earth); font-weight: 500;">{{ formatMonthDays(selectedEntry.monthDays) }}</span>
+              </div>
+              
+              <div v-if="selectedEntry.time">
+                <span style="color: var(--enbauges-brown);">Heure:</span>
+                <span style="color: var(--enbauges-earth); font-weight: 500;">{{ selectedEntry.time }}</span>
+              </div>
+              
+              <div v-if="selectedEntry.location">
+                <span style="color: var(--enbauges-brown);">Lieu:</span>
+                <span style="color: var(--enbauges-earth); font-weight: 500;">{{ selectedEntry.location }}</span>
+              </div>
+              
+              <div v-if="selectedEntry.organizer">
+                <span style="color: var(--enbauges-brown);">Organisateur:</span>
+                <span style="color: var(--enbauges-earth); font-weight: 500;">{{ selectedEntry.organizer }}</span>
+              </div>
+              
+              <div v-if="selectedEntry.contact">
+                <span style="color: var(--enbauges-brown);">Contact:</span>
+                <span style="color: var(--enbauges-earth); font-weight: 500;">{{ selectedEntry.contact }}</span>
+              </div>
+            </div>
+            
+            <div v-if="selectedEntry.url" style="margin-top: 1rem;">
+              <a :href="selectedEntry.url" target="_blank" rel="noopener" class="enbauges-btn-secondary" style="display: inline-block; text-decoration: none;">
+                Plus d'infos →
+              </a>
+            </div>
+            
+            <div v-if="selectedEntry.tags && selectedEntry.tags.length" style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.25rem;">
+              <span v-for="tag in selectedEntry.tags" :key="tag" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: var(--enbauges-cream); border-radius: 1rem; color: var(--enbauges-brown);">
+                {{ tag }}
+              </span>
+            </div>
+          </div>
+          
+          <div v-else-if="detailTab === 'comments'">
+            <div style="margin-bottom: 1rem;">
+              <div v-if="entryComments.length === 0" style="text-align: center; padding: 2rem; color: var(--enbauges-brown);">
+                Aucun commentaire
+              </div>
+              <div v-else style="display: grid; gap: 0.75rem; max-height: 12rem; overflow-y: auto;">
+                <div v-for="comment in entryComments" :key="comment._id" style="padding: 0.75rem; background: var(--enbauges-cream); border-radius: 0.5rem;">
+                  <div style="font-size: 0.875rem; color: var(--enbauges-earth); line-height: 1.5;">{{ comment.content }}</div>
+                  <div style="font-size: 0.75rem; color: var(--enbauges-brown-light); margin-top: 0.25rem;">{{ formatDate(comment.createdAt) }}</div>
+                </div>
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem;">
+              <input 
+                v-model="newComment" 
+                type="text" 
+                class="enbauges-input" 
+                placeholder="Ajouter un commentaire..."
+                style="flex: 1;"
+                @keyup.enter="submitComment"
+              >
+              <button @click="submitComment" class="enbauges-btn-primary" style="padding: 0.5rem 1rem;">Env</button>
+            </div>
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 0.5rem; justify-content: flex-end; padding: 1rem; border-top: 1px solid var(--enbauges-cream);">
+          <button @click="toggleVote(selectedEntry)" style="background: none; border: 1px solid var(--enbauges-brown); cursor: pointer; padding: 0.5rem 1rem; border-radius: 0.5rem; display: flex; align-items: center; gap: 0.25rem;" :style="{ color: hasVoted(selectedEntry) ? 'var(--enbauges-amber)' : 'var(--enbauges-brown)' }">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8 2l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4l2-4z"/>
+            </svg>
+            {{ selectedEntry.votes || 0 }}
+          </button>
+          <button @click="editEntry(selectedEntry); closeEntryDetail();" class="enbauges-btn-secondary" style="padding: 0.5rem 1rem;">
+            Modifier
+          </button>
+          <button @click="deleteEntry(selectedEntry); closeEntryDetail();" style="background: none; border: none; cursor: pointer; color: var(--enbauges-brown); padding: 0.5rem;">
+            <svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 4l8 8M4 12l8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showAddModal" class="enbauges-modal-backdrop" @click.self="closeAddModal">
+      <div class="enbauges-modal" style="max-width: 28rem;">
+        <div class="enbauges-modal__header">
+          <h2 class="enbauges-modal__title">{{ editingEntry ? 'Modifier' : 'Ajouter un evenement' }}</h2>
+        </div>
+        <div class="enbauges-modal__body">
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Type *
+            </label>
+            <div style="display: flex; gap: 0.5rem;">
+              <button 
+                class="enbauges-filter-toggle enbauges-filter-toggle--solution"
+                :class="{ 'enbauges-filter-toggle--active': form.type === 'event' }"
+                style="flex: 1;"
+                @click="form.type = 'event'"
+                type="button"
+              >
+                Evenement
+              </button>
+              <button 
+                class="enbauges-filter-toggle enbauges-filter-toggle--initiative"
+                :class="{ 'enbauges-filter-toggle--active': form.type === 'template' }"
+                style="flex: 1;"
+                @click="form.type = 'template'"
+                type="button"
+              >
+                Modele
+              </button>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Titre *
+            </label>
+            <input v-model="form.title" type="text" class="enbauges-input" placeholder="Nom de l'evenement" maxlength="200">
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Description
+            </label>
+            <textarea v-model="form.description" class="enbauges-input" rows="2" placeholder="Details..." maxlength="2000"></textarea>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+                Debut *
+              </label>
+              <input v-model="form.startDate" type="date" class="enbauges-input">
+            </div>
+            <div>
+              <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+                Fin
+              </label>
+              <input v-model="form.endDate" type="date" class="enbauges-input">
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Recurrence
+            </label>
+            <div style="display: flex; gap: 0.5rem;">
+              <button 
+                v-for="freq in ['one-time', 'weekly', 'monthly']" 
+                :key="freq"
+                class="enbauges-filter-toggle"
+                :class="{ 'enbauges-filter-toggle--active': form.frequency === freq }"
+                @click="form.frequency = freq"
+                type="button"
+                style="flex: 1;"
+              >
+                {{ freq === 'one-time' ? 'Unique' : freq === 'weekly' ? 'Hebdo' : 'Mensuel' }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="form.frequency === 'weekly'" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--enbauges-cream); border-radius: 0.5rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth); font-size: 0.875rem;">
+              Jours de la semaine
+            </label>
+            <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
+              <button 
+                v-for="(day, idx) in ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']" 
+                :key="idx"
+                type="button"
+                class="enbauges-filter-toggle"
+                :class="{ 'enbauges-filter-toggle--active': form.weekdays.includes(idx) }"
+                @click="toggleFormWeekday(idx)"
+                style="min-width: 2.25rem; padding: 0.25rem;"
+              >
+                {{ day }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="form.frequency === 'monthly'" style="margin-bottom: 1rem; padding: 0.75rem; background: var(--enbauges-cream); border-radius: 0.5rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth); font-size: 0.875rem;">
+              Jours du mois
+            </label>
+            <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
+              <button 
+                v-for="day in 31" 
+                :key="day"
+                type="button"
+                class="enbauges-filter-toggle"
+                :class="{ 'enbauges-filter-toggle--active': form.monthDays.includes(day) }"
+                @click="toggleFormMonthDay(day)"
+                style="min-width: 2rem; padding: 0.25rem; font-size: 0.75rem;"
+              >
+                {{ day }}
+              </button>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Lieu
+            </label>
+            <input v-model="form.location" type="text" class="enbauges-input" placeholder="Adresse ou lieu">
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Organisateur
+            </label>
+            <input v-model="form.organizer" type="text" class="enbauges-input" placeholder="Nom de l'organisateur">
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Contact
+            </label>
+            <input v-model="form.contact" type="text" class="enbauges-input" placeholder="Email ou telephone">
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem; color: var(--enbauges-earth);">
+              Tags
+            </label>
+            <input v-model="tagsInput" type="text" class="enbauges-input" placeholder="Separes par virgules">
+          </div>
+
+          <div v-if="formError" style="color: #dc2626; font-size: 0.875rem; margin-bottom: 1rem;">
+            {{ formError }}
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+            <button class="enbauges-btn-secondary" @click="closeAddModal">Annuler</button>
+            <button class="enbauges-btn-primary" @click="submitEntry" :disabled="submitting">
+              {{ submitting ? 'Envoi...' : 'Publier' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showDeleteConfirm" class="enbauges-modal-backdrop" @click.self="showDeleteConfirm = false">
+      <div class="enbauges-modal" style="max-width: 20rem;">
+        <div class="enbauges-modal__header">
+          <h2 class="enbauges-modal__title">Supprimer?</h2>
+        </div>
+        <div class="enbauges-modal__body">
+          <p style="color: var(--enbauges-brown); margin-bottom: 1.5rem;">
+            Etes-vous sur de vouloir supprimer cet evenement?
+          </p>
+          <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+            <button class="enbauges-btn-secondary" @click="showDeleteConfirm = false">Annuler</button>
+            <button class="enbauges-btn-primary" @click="confirmDelete" style="background: #dc2626;">Supprimer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const entries = ref([]);
+        const loading = ref(true);
+        const viewMode = ref('grid');
+        const filterType = ref('all');
+        const currentMonth = ref(dayjs().month() + 1);
+        const currentYear = ref(dayjs().year());
+        const showAddModal = ref(false);
+        const showDeleteConfirm = ref(false);
+        const editingEntry = ref(null);
+        const entryToDelete = ref(null);
+        const submitting = ref(false);
+        const formError = ref('');
+        const selectedDay = ref(null);
+        const tagsInput = ref('');
+        const selectedEntry = ref(null);
+        const detailTab = ref('details');
+        const weekDays = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+        const entryComments = ref([]);
+        const entryLinks = ref([]);
+        const newComment = ref('');
+
+        const form = ref({
+          type: 'event',
+          title: '',
+          description: '',
+          startDate: '',
+          endDate: '',
+          frequency: 'one-time',
+          weekdays: [],
+          monthDays: [],
+          location: '',
+          organizer: '',
+          contact: '',
+          url: ''
+        });
+
+        const voterId = ref(localStorage.getItem('enbauges_calendar_voter_id') || (
+          localStorage.setItem('enbauges_calendar_voter_id', 'v_' + Math.random().toString(36).slice(2)),
+          localStorage.getItem('enbauges_calendar_voter_id')
+        ));
+
+        const myVotes = ref(JSON.parse(localStorage.getItem('enbauges_calendar_votes') || '[]'));
+
+        const toast = ref({ show: false, type: 'success', message: '' });
+
+        const monthName = computed(() => {
+          return dayjs().month(currentMonth.value - 1).format('MMMM');
+        });
+
+        const filteredEntries = computed(() => {
+          if (filterType.value === 'all') return entries.value;
+          return entries.value.filter(e => e.type === filterType.value);
+        });
+
+        const calendarDays = computed(() => {
+          const firstDay = dayjs().year(currentYear.value).month(currentMonth.value - 1).date(1);
+          const startPadding = firstDay.day();
+          const daysInMonth = firstDay.daysInMonth();
+          
+          const days = [];
+          
+          for (let i = 0; i < startPadding; i++) {
+            days.push({ date: null, entries: [] });
+          }
+          
+          const today = dayjs();
+          
+          for (let d = 1; d <= daysInMonth; d++) {
+            const date = dayjs().year(currentYear.value).month(currentMonth.value - 1).date(d);
+            const dateStr = date.format('YYYY-MM-DD');
+            
+            const dayEntries = filteredEntries.value.filter(entry => {
+              if (entry.frequency === 'one-time') {
+                return dayjs(entry.startDate).format('YYYY-MM-DD') === dateStr;
+              } else if (entry.frequency === 'weekly') {
+                if (!entry.weekdays || !entry.weekdays.includes(date.day())) return false;
+                if (entry.exceptions) {
+                  for (const exc of entry.exceptions) {
+                    if (dayjs(exc).format('YYYY-MM-DD') === dateStr) return false;
+                  }
+                }
+                return date.isAfter(dayjs(entry.startDate).subtract(1, 'day')) || date.isSame(dayjs(entry.startDate), 'day');
+              } else if (entry.frequency === 'monthly') {
+                if (!entry.monthDays || !entry.monthDays.includes(d)) return false;
+                if (entry.exceptions) {
+                  for (const exc of entry.exceptions) {
+                    if (dayjs(exc).format('YYYY-MM-DD') === dateStr) return false;
+                  }
+                }
+                return date.isAfter(dayjs(entry.startDate).subtract(1, 'day')) || date.isSame(dayjs(entry.startDate), 'day');
+              }
+              return false;
+            });
+            
+            days.push({
+              date: date,
+              dayNumber: d,
+              isToday: date.isSame(today, 'day'),
+              isPast: date.isBefore(today, 'day'),
+              entries: dayEntries
+            });
+          }
+          
+          while (days.length < 42) {
+            days.push({ date: null, entries: [] });
+          }
+          
+          return days;
+        });
+
+        const showToast = (message, type = 'success') => {
+          toast.value = { show: true, type, message };
+          setTimeout(() => { toast.value.show = false; }, 3000);
+        };
+
+        const formatDate = (dateStr) => {
+          if (!dateStr) return '';
+          return dayjs(dateStr).format('D MMM YYYY');
+        };
+
+        const formatWeekdays = (weekdays) => {
+          if (!weekdays || !weekdays.length) return '';
+          const labels = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+          return weekdays.sort((a, b) => a - b).map(d => labels[d]).join(', ');
+        };
+
+        const formatMonthDays = (monthDays) => {
+          if (!monthDays || !monthDays.length) return '';
+          return monthDays.sort((a, b) => a - b).join(', ');
+        };
+
+        const truncate = (str, len) => {
+          if (!str || str.length <= len) return str;
+          return str.slice(0, len) + '...';
+        };
+
+        const loadEntries = async () => {
+          loading.value = true;
+          try {
+            const res = await fetch('/calendrier/api');
+            const data = await res.json();
+            entries.value = data.entries || [];
+          } catch (error) {
+            console.error('Error loading entries:', error);
+            showToast('Erreur lors du chargement', 'error');
+          } finally {
+            loading.value = false;
+          }
+        };
+
+        const prevMonth = () => {
+          if (currentMonth.value === 1) {
+            currentMonth.value = 12;
+            currentYear.value--;
+          } else {
+            currentMonth.value--;
+          }
+        };
+
+        const nextMonth = () => {
+          if (currentMonth.value === 12) {
+            currentMonth.value = 1;
+            currentYear.value++;
+          } else {
+            currentMonth.value++;
+          }
+        };
+
+        const selectDay = (day) => {
+          if (day.entries.length > 0) {
+            selectedDay.value = day;
+          }
+        };
+
+        const openEntryDetail = async (entry) => {
+          selectedEntry.value = entry;
+          detailTab.value = 'details';
+          entryComments.value = [];
+          newComment.value = '';
+          try {
+            const res = await fetch(`/calendrier/api/${entry._id}`);
+            if (res.ok) {
+              const data = await res.json();
+              selectedEntry.value = data;
+            }
+          } catch (e) {
+            console.error('Error loading entry details:', e);
+          }
+        };
+
+        const closeEntryDetail = () => {
+          selectedEntry.value = null;
+          entryComments.value = [];
+          newComment.value = '';
+        };
+
+        const submitComment = async () => {
+          if (!newComment.value.trim() || !selectedEntry.value) return;
+          const content = newComment.value.trim();
+          try {
+            const res = await fetch(`/calendrier/api/${selectedEntry.value._id}/comments`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ content })
+            });
+            if (res.ok) {
+              newComment.value = '';
+              entryComments.value.push({ content, createdAt: new Date() });
+              showToast('Commentaire ajoute');
+            }
+          } catch (e) {
+            showToast('Erreur lors de l\'ajout du commentaire', 'error');
+          }
+        };
+
+        const hasVoted = (entry) => {
+          return myVotes.value.includes(entry._id);
+        };
+
+        const toggleVote = async (entry) => {
+          try {
+            const res = await fetch(`/calendrier/api/${entry._id}/vote`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ voterId: voterId.value })
+            });
+            
+            if (!res.ok) throw new Error('Erreur');
+            
+            const data = await res.json();
+            entry.votes = data.votes;
+            
+            if (data.voted) {
+              myVotes.value.push(entry._id);
+            } else {
+              myVotes.value = myVotes.value.filter(id => id !== entry._id);
+            }
+            localStorage.setItem('enbauges_calendar_votes', JSON.stringify(myVotes.value));
+          } catch (error) {
+            showToast('Erreur lors du vote', 'error');
+          }
+        };
+
+        const editEntry = (entry) => {
+          editingEntry.value = entry;
+          form.value = {
+            type: entry.type,
+            title: entry.title,
+            description: entry.description || '',
+            startDate: dayjs(entry.startDate).format('YYYY-MM-DD'),
+            endDate: entry.endDate ? dayjs(entry.endDate).format('YYYY-MM-DD') : '',
+            frequency: entry.frequency,
+            weekdays: entry.weekdays || [],
+            monthDays: entry.monthDays || [],
+            location: entry.location || '',
+            organizer: entry.organizer || '',
+            contact: entry.contact || '',
+            url: entry.url || ''
+          };
+          tagsInput.value = entry.tags ? entry.tags.join(', ') : '';
+          showAddModal.value = true;
+        };
+
+        const deleteEntry = (entry) => {
+          entryToDelete.value = entry;
+          showDeleteConfirm.value = true;
+        };
+
+        const confirmDelete = async () => {
+          if (!entryToDelete.value) return;
+          
+          try {
+            const res = await fetch(`/calendrier/api/${entryToDelete.value._id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Erreur');
+            showToast('Evenement supprime');
+            showDeleteConfirm.value = false;
+            entryToDelete.value = null;
+            loadEntries();
+          } catch (error) {
+            showToast(error.message, 'error');
+          }
+        };
+
+        const toggleFormWeekday = (day) => {
+          const idx = form.value.weekdays.indexOf(day);
+          if (idx === -1) {
+            form.value.weekdays.push(day);
+          } else {
+            form.value.weekdays.splice(idx, 1);
+          }
+        };
+
+        const toggleFormMonthDay = (day) => {
+          const idx = form.value.monthDays.indexOf(day);
+          if (idx === -1) {
+            form.value.monthDays.push(day);
+          } else {
+            form.value.monthDays.splice(idx, 1);
+          }
+        };
+
+        const resetForm = () => {
+          form.value = {
+            type: 'event',
+            title: '',
+            description: '',
+            startDate: '',
+            endDate: '',
+            frequency: 'one-time',
+            weekdays: [],
+            monthDays: [],
+            location: '',
+            organizer: '',
+            contact: '',
+            url: ''
+          };
+          tagsInput.value = '';
+          formError.value = '';
+          editingEntry.value = null;
+        };
+
+        const closeAddModal = () => {
+          showAddModal.value = false;
+          resetForm();
+        };
+
+        const submitEntry = async () => {
+          formError.value = '';
+          
+          if (!form.value.title.trim()) {
+            formError.value = 'Le titre est requis';
+            return;
+          }
+          if (!form.value.startDate) {
+            formError.value = 'La date de debut est requise';
+            return;
+          }
+
+          submitting.value = true;
+          try {
+            const tags = tagsInput.value.split(',').map(t => t.trim()).filter(t => t);
+            
+            const payload = {
+              ...form.value,
+              tags
+            };
+            
+            let res;
+            if (editingEntry.value) {
+              res = await fetch(`/calendrier/api/${editingEntry.value._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+            } else {
+              res = await fetch('/calendrier/api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+            }
+            
+            if (!res.ok) {
+              const error = await res.json();
+              throw new Error(error.error || 'Erreur');
+            }
+            
+            showToast(editingEntry.value ? 'Evenement modifie' : 'Evenement ajoute');
+            closeAddModal();
+            loadEntries();
+          } catch (error) {
+            formError.value = error.message;
+          } finally {
+            submitting.value = false;
+          }
+        };
+
+        const openUrl = (url) => {
+          window.open(url, '_blank');
+        };
+
+        const handleKeydown = (e) => {
+          if (e.key === 'Escape') {
+            if (showAddModal.value) closeAddModal();
+            if (showDeleteConfirm.value) showDeleteConfirm.value = false;
+            if (selectedDay.value) selectedDay.value = null;
+            if (selectedEntry.value) closeEntryDetail();
+          }
+        };
+
+        onMounted(() => {
+          loadEntries();
+          window.addEventListener('keydown', handleKeydown);
+        });
+
+        return {
+          entries,
+          loading,
+          viewMode,
+          filterType,
+          currentMonth,
+          currentYear,
+          monthName,
+          weekDays,
+          calendarDays,
+          filteredEntries,
+          showAddModal,
+          showDeleteConfirm,
+          editingEntry,
+          submitting,
+          formError,
+          form,
+          tagsInput,
+          selectedDay,
+          selectedEntry,
+          detailTab,
+          toast,
+          showToast,
+          formatDate,
+          formatWeekdays,
+          formatMonthDays,
+          truncate,
+          prevMonth,
+          nextMonth,
+          selectDay,
+          openEntryDetail,
+          closeEntryDetail,
+          submitComment,
+          hasVoted,
+          toggleVote,
+          editEntry,
+          deleteEntry,
+          confirmDelete,
+          toggleFormWeekday,
+          toggleFormMonthDay,
+          closeAddModal,
+          submitEntry,
+          openUrl
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"html/template"
-	"io/fs"
 	"log"
 	"net/http"
 	"time"
@@ -13,9 +12,8 @@ import (
 )
 
 var (
-	agendaTmpl   *template.Template
-	annuaireTmpl *template.Template
-	parisTZ      *time.Location
+	tmplCache = map[string]*template.Template{}
+	parisTZ   *time.Location
 )
 
 var frMonths = [...]string{"janvier", "février", "mars", "avril", "mai", "juin",
@@ -28,24 +26,47 @@ func init() {
 	if err != nil {
 		parisTZ = time.UTC
 	}
-	agendaTmpl = template.Must(template.ParseFS(webFS, "web/agenda.html"))
-	annuaireTmpl = template.Must(template.ParseFS(webFS, "web/annuaire.html"))
+}
+
+// getTemplate returns the cached embedded template unless a disk override
+// exists, in which case it re-parses per request so UI edits apply live.
+func getTemplate(name string) (*template.Template, error) {
+	if !webOverlay.OnDisk(name) {
+		if t, ok := tmplCache[name]; ok {
+			return t, nil
+		}
+	}
+	data, err := webOverlay.ReadFile(name)
+	if err != nil {
+		return nil, err
+	}
+	t, err := template.New(name).Parse(string(data))
+	if err != nil {
+		return nil, err
+	}
+	if !webOverlay.OnDisk(name) {
+		tmplCache[name] = t
+	}
+	return t, nil
 }
 
 func servePage(name string) http.HandlerFunc {
-	data, err := webFS.ReadFile("web/" + name)
-	if err != nil {
-		log.Fatalf("missing embedded page %s: %v", name, err)
+	if _, err := webOverlay.ReadFile(name); err != nil {
+		log.Fatalf("missing page %s: %v", name, err)
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
+		data, err := webOverlay.ReadFile(name)
+		if err != nil {
+			http.Error(w, "page unavailable", 500)
+			return
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write(data)
 	}
 }
 
 func serveStatic(w http.ResponseWriter, r *http.Request) {
-	sub, _ := fs.Sub(webFS, "web")
-	http.FileServerFS(sub).ServeHTTP(w, r)
+	http.FileServerFS(webOverlay).ServeHTTP(w, r)
 }
 
 type agendaEvent struct {
@@ -91,7 +112,13 @@ func handleAgendaPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := agendaTmpl.Execute(w, map[string]any{"Months": months}); err != nil {
+	tmpl, err := getTemplate("agenda.html")
+	if err != nil {
+		http.Error(w, "template error", 500)
+		log.Println("agenda template:", err)
+		return
+	}
+	if err := tmpl.Execute(w, map[string]any{"Months": months}); err != nil {
 		log.Println("agenda template:", err)
 	}
 }
@@ -127,7 +154,13 @@ func handleAnnuairePage(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now().In(parisTZ)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	err = annuaireTmpl.Execute(w, map[string]any{
+	tmpl, terr := getTemplate("annuaire.html")
+	if terr != nil {
+		http.Error(w, "template error", 500)
+		log.Println("annuaire template:", terr)
+		return
+	}
+	err = tmpl.Execute(w, map[string]any{
 		"Total":       len(all),
 		"Sections":    sections,
 		"SiteURL":     baseURL(r) + "/",

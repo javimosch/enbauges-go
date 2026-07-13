@@ -7,11 +7,14 @@ package main
 import (
 	"context"
 	"embed"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/javimosch/enbauges-go/plugin"
+	"github.com/javimosch/enbauges-go/plugins"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -22,6 +25,7 @@ var webFS embed.FS
 var (
 	db         *mongo.Database
 	adminToken string
+	webOverlay *plugin.OverlayFS
 )
 
 func env(key, fallback string) string {
@@ -39,6 +43,15 @@ func main() {
 	if adminToken == "" {
 		log.Println("WARN: ADMIN_TOKEN not set — event moderation endpoints disabled")
 	}
+
+	embeddedWeb, _ := fs.Sub(webFS, "web")
+	webDir := env("WEB_DIR", "./web")
+	if _, err := os.Stat(webDir); err != nil {
+		webDir = "" // no disk override available; pure embedded mode
+	} else {
+		log.Printf("web overlay active: disk files under %s take precedence", webDir)
+	}
+	webOverlay = plugin.NewOverlayFS(webDir, embeddedWeb)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -95,6 +108,10 @@ func main() {
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]any{"status": "ok"})
 	})
+
+	// Mini-apps: compiled-in plugins, then declarative reverse proxies.
+	plugin.Setup(mux, db, plugins.All())
+	plugin.SetupProxies(mux, os.Getenv("PLUGIN_PROXY"))
 
 	log.Printf("enbauges-go listening on :%s (db=%s)", port, dbName)
 	log.Fatal(http.ListenAndServe(":"+port, mux))

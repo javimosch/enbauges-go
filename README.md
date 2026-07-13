@@ -51,6 +51,45 @@ curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3000/api/a
 curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" http://localhost:3000/api/admin/events/<id>/reject
 ```
 
+## Mini-apps (plugins)
+
+Deux mécanismes (voir `docs/design-plugins-and-deploy.md`) :
+
+**Plugins compilés** — un package sous `plugins/<id>/` implémentant
+`plugin.Plugin` (`Meta / Mount / Install / Bootstrap`), enregistré dans
+`plugins/registry.go`. `Install` tourne une fois par version (état dans la
+collection `pluginstate`), la service card s'upserte sur le canvas, l'UI du
+plugin (`plugins/<id>/web/`) est embarquée **et** modifiable sur disque.
+Désactivation sans rebuild : `PLUGINS_DISABLED=calendar,autre`.
+Premier plugin migré : `calendar` (`/calendrier`), compatible bidirectionnel
+avec le plugin Node sur la collection `calendarentries`.
+
+**Plugins proxy** — pour les mini-apps pas encore migrées (elles peuvent être
+l'app Node d'origine) :
+
+```
+PLUGIN_PROXY=open-panneau=http://127.0.0.1:3015,irc-chat=http://127.0.0.1:3021
+```
+
+`/open-panneau/*` est proxifié tel quel ; upstream mort → 502 propre.
+
+## UI modifiable sans reshipper le binaire
+
+Tout `web/` (cœur et plugins) est embarqué dans le binaire **mais** un fichier
+présent sur disque (`WEB_DIR`, défaut `./web` ; plugins : `./plugins/<id>/web`)
+prend le dessus immédiatement — les templates sont re-parsés à la volée quand
+une version disque existe. D'où :
+
+```bash
+./deploy.sh ui    # rsync des fichiers UI seulement — aucun restart
+./deploy.sh       # build + binaire + UI + restart systemd
+./deploy.sh --dry-run
+```
+
+Config dans `.deployrc` ou env : `DEPLOY_HOST`, `DEPLOY_PATH` (défaut
+`/srv/enbauges`), `DEPLOY_SERVICE` (défaut `enbauges`). Sans `WEB_DIR` sur
+disque, le binaire reste 100 % autosuffisant.
+
 ## Docker
 
 ```bash
