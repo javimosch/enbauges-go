@@ -66,8 +66,16 @@ vérif bidirectionnelle passée, commit.
   (même convention d'URL que le loader Node). Compat bidirectionnelle vérifiée
   sur `ircchannels`, `ircmessages`, `mapmarkers`.
 - **Vague 3 — les gros** : `open-panneau` (T2 requis), `panier-libre`.
-  Attention open-panneau : workflow d'approbation des mairies + admin ;
-  panier-libre : cascades Provider→Baskets→Bookings à préserver.
+  - `panier-libre` ✔ (2026-07-13) — porté avec le verrouillage optimiste `__v`
+    interopérable avec mongoose (réservations concurrentes sûres entre les
+    deux apps), les cascades Provider→Baskets→Bookings, la libération de stock
+    à la modification/annulation, l'upsert cross-plugin de marqueur carte.
+    **Découverte d'audit** : `adminPassword` est stocké en clair côté Node
+    (pas de sha256 contrairement à l'hypothèse du plan) — comportement
+    préservé pour la compat ; hachage à traiter comme migration coordonnée
+    après le retrait de Node.
+  - `open-panneau` : restant. Auth mairie sha256 réelle + superadmin Basic
+    auth (T2).
 - **Vague 4 — le dépendant** : `anomalies-map` (T1 requis).
   Dernier car il impose la brique assets.
 
