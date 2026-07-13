@@ -47,6 +47,8 @@
           </button>
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem; pointer-events: auto;">
+          <input v-if="graphMode === '3d'" v-model="graphSearch" @input="graphSearchFly" type="search" placeholder="Rechercher un astre…"
+            style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #FAF7F2; padding: 0.4rem 0.75rem; border-radius: 0.5rem; font-size: 0.8125rem; width: 170px;">
           <span v-if="graphLoading" style="color: rgba(250,247,242,0.6); font-size: 0.875rem;">Constellation en préparation…</span>
           <div v-if="graphSupports3D" style="display: flex; border: 1px solid rgba(255,255,255,0.2); border-radius: 0.5rem; overflow: hidden;">
             <button @click="setGraphMode('3d')" :style="{ background: graphMode === '3d' ? 'rgba(255,255,255,0.18)' : 'transparent', border: 'none', color: '#FAF7F2', padding: '0.4rem 0.75rem', cursor: 'pointer', fontSize: '0.8125rem' }">3D</button>
@@ -56,8 +58,10 @@
         </div>
       </div>
 
-      <div style="position: absolute; bottom: 1rem; left: 1rem; z-index: 10; color: rgba(250,247,242,0.35); font-size: 0.75rem; pointer-events: none;">
-        <span v-if="graphMode === '3d'">Glissez pour orbiter · molette pour zoomer · cliquez un astre pour l'explorer</span>
+      <div style="position: absolute; bottom: 1rem; left: 1rem; z-index: 10; font-size: 0.75rem; pointer-events: none;"
+        :style="{ color: graphLinking ? '#D4A03C' : 'rgba(250,247,242,0.35)' }">
+        <span v-if="graphLinking">🔗 Mode liaison : cliquez l'astre à relier à « {{ graphLinking.name }} » — Échap pour annuler</span>
+        <span v-else-if="graphMode === '3d'">Glissez pour orbiter · molette pour zoomer · cliquez un astre pour l'explorer</span>
         <span v-else>La taille des nœuds reflète le nombre de connexions</span>
       </div>
 
@@ -78,7 +82,27 @@
         <div v-if="graphSelectedDegree === 0" style="font-size: 0.75rem; color: #D4A03C; margin-bottom: 0.75rem;">
           ✨ Cette carte est seule — reliez-la pour faire vivre la constellation.
         </div>
-        <button @click="openCardFromGraph" class="enbauges-btn-primary" style="width: 100%;">Ouvrir la carte</button>
+
+        <!-- Link creation from the constellation -->
+        <div v-if="graphPendingLink" style="margin-bottom: 0.75rem; padding: 0.75rem; background: rgba(212,160,60,0.12); border: 1px solid rgba(212,160,60,0.35); border-radius: 0.5rem;">
+          <div style="font-size: 0.75rem; color: rgba(250,247,242,0.8); margin-bottom: 0.5rem;">
+            « {{ graphPendingLink.source.name }} » → « {{ graphPendingLink.target.name }} »
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.375rem;">
+            <button v-for="(label, rel) in { reinforces: 'Renforce', depends_on: 'Dépend de', uses: 'Utilise', inspires: 'Inspire' }" :key="rel"
+              @click="confirmGraphLink(rel)"
+              style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #FAF7F2; padding: 0.375rem 0.5rem; border-radius: 0.375rem; cursor: pointer; font-size: 0.75rem;">
+              {{ label }}
+            </button>
+          </div>
+          <button @click="cancelGraphLink" style="width: 100%; margin-top: 0.375rem; background: none; border: none; color: rgba(250,247,242,0.5); cursor: pointer; font-size: 0.75rem;">Annuler</button>
+        </div>
+        <div v-if="graphLinkError" style="font-size: 0.75rem; color: #F87171; margin-bottom: 0.75rem;">{{ graphLinkError }}</div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button v-if="!graphPendingLink" @click="startGraphLink" class="enbauges-btn-secondary" style="flex: 1; border-color: rgba(212,160,60,0.6); color: #D4A03C; background: transparent;">🔗 Relier</button>
+          <button @click="openCardFromGraph" class="enbauges-btn-primary" style="flex: 1;">Ouvrir la carte</button>
+        </div>
       </div>
 
       <div id="graph3d" v-show="graphMode === '3d'" style="flex: 1;"></div>
@@ -866,7 +890,7 @@
               <div style="margin-bottom: 0.75rem;">
                 <select v-model="linkTargetId" class="enbauges-input" style="margin-bottom: 0.5rem;">
                   <option value="">Sélectionner une carte...</option>
-                  <option v-for="c in otherCards" :key="c._id" :value="c._id">
+                  <option v-for="c in linkTargets" :key="c._id" :value="c._id">
                     [{{ c.type === 'actor' ? 'Acteur' : c.type === 'solution' ? 'Solution' : 'Initiative' }}] {{ c.title }}
                   </option>
                 </select>
@@ -884,6 +908,7 @@
                   Créer le lien
                 </button>
               </div>
+              <div v-if="linkError" style="color: #DC2626; font-size: 0.8125rem; margin-top: 0.5rem;">{{ linkError }}</div>
             </div>
           </div>
           
@@ -1012,6 +1037,7 @@
         const cardComments = ref([]);
         const cardLinks = ref([]);
         const linkMode = ref(false);
+        const linkError = ref('');
         const linkTargetId = ref('');
         const linkType = ref('');
         const newComment = ref('');
@@ -1036,6 +1062,11 @@
         let graphRaw = { cards: [], links: [], degrees: {} };
         let orbitTimer = null;
         let selectedNodeId = null;
+        const graphSearch = ref('');
+        const graphLinking = ref(null);      // source node while picking a target
+        const graphPendingLink = ref(null);  // { source, target } awaiting relation choice
+        const graphLinkError = ref('');
+        let orphanPulseRaf = null;
 
         function toggleOtherCards() {
           showOtherCards.value = !showOtherCards.value;
@@ -1149,6 +1180,9 @@
 
         function closeGraphMode() {
           stopOrbit();
+          if (orphanPulseRaf) { cancelAnimationFrame(orphanPulseRaf); orphanPulseRaf = null; }
+          graphSearch.value = '';
+          cancelGraphLink();
           if (cyInstance) { cyInstance.destroy(); cyInstance = null; }
           if (fg3dInstance) {
             try { fg3dInstance._destructor && fg3dInstance._destructor(); } catch (e) {}
@@ -1221,6 +1255,19 @@
           return graphNeighbors(selectedNodeId).has(node.id) ? base : 'rgba(120,120,140,0.18)';
         }
 
+        function handleGraphNodeClick(node) {
+          if (graphLinking.value) {
+            if (node.id === graphLinking.value.id) return;
+            graphPendingLink.value = { source: graphLinking.value, target: node };
+            graphLinking.value = null;
+            selectedNodeId = graphPendingLink.value.source.id;
+            graphSelected.value = graphPendingLink.value.source.card;
+            graphSelectedDegree.value = graphPendingLink.value.source.degree;
+            return;
+          }
+          selectGraphNode(node);
+        }
+
         function selectGraphNode(node) {
           selectedNodeId = node.id;
           graphSelected.value = node.card;
@@ -1240,7 +1287,63 @@
         function deselectGraphNode() {
           selectedNodeId = null;
           graphSelected.value = null;
+          graphLinking.value = null;
+          graphPendingLink.value = null;
+          graphLinkError.value = '';
           if (fg3dInstance) fg3dInstance.refresh();
+        }
+
+        function startGraphLink() {
+          if (!graphSelected.value || !fg3dInstance) return;
+          const node = fg3dInstance.graphData().nodes.find(n => n.id === selectedNodeId);
+          graphLinking.value = node || null;
+          graphLinkError.value = '';
+        }
+
+        function cancelGraphLink() {
+          graphLinking.value = null;
+          graphPendingLink.value = null;
+          graphLinkError.value = '';
+        }
+
+        async function confirmGraphLink(relType) {
+          const pending = graphPendingLink.value;
+          if (!pending) return;
+          graphLinkError.value = '';
+          try {
+            const res = await fetch('/api/links', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sourceCardId: pending.source.id,
+                targetCardId: pending.target.id,
+                relationshipType: relType
+              })
+            });
+            if (!res.ok) {
+              const err = await res.json();
+              throw new Error(err.error || 'Erreur lors de la création du lien');
+            }
+            graphPendingLink.value = null;
+            await fetchGraphData();
+            if (fg3dInstance) {
+              fg3dInstance.graphData(filteredGraphData());
+              const src = fg3dInstance.graphData().nodes.find(n => n.id === pending.source.id);
+              if (src) selectGraphNode(src);
+            }
+            showToast('Lien créé ✨');
+          } catch (e) {
+            graphLinkError.value = e.message;
+          }
+        }
+
+        function graphSearchFly() {
+          const q = graphSearch.value.trim().toLowerCase();
+          if (!q || !fg3dInstance) return;
+          const node = filteredGraphData().nodes.find(n => n.name.toLowerCase().includes(q));
+          if (!node) return;
+          const live = fg3dInstance.graphData().nodes.find(n => n.id === node.id);
+          if (live && live.x !== undefined) selectGraphNode(live);
         }
 
         function openCardFromGraph() {
@@ -1287,8 +1390,12 @@
             .linkDirectionalParticleSpeed(l => REL_SPEED[l.relType] || 0.007)
             .linkDirectionalParticleWidth(1.6)
             .linkDirectionalParticleColor(() => '#D4A03C')
-            .onNodeClick(selectGraphNode)
-            .onBackgroundClick(deselectGraphNode)
+            .onNodeClick(handleGraphNodeClick)
+            .onBackgroundClick(() => {
+              // While aiming a link, missing a star must not cancel the mode
+              if (graphLinking.value || graphPendingLink.value) return;
+              deselectGraphNode();
+            })
             .graphData(filteredGraphData());
 
           // Slow ambient orbit until the visitor takes over
@@ -1304,6 +1411,17 @@
             });
           }, 40);
           fg3dInstance.controls().addEventListener('start', stopOrbit);
+
+          // Orphan stars pulse gently, inviting a first link
+          const pulse = (t) => {
+            if (!fg3dInstance) return;
+            const k = 1 + 0.18 * Math.sin(t / 500);
+            fg3dInstance.graphData().nodes.forEach(n => {
+              if (n.degree === 0 && n.__threeObj) n.__threeObj.scale.set(k, k, k);
+            });
+            orphanPulseRaf = requestAnimationFrame(pulse);
+          };
+          orphanPulseRaf = requestAnimationFrame(pulse);
         }
 
         async function initGraph() {
@@ -1466,6 +1584,11 @@
           return filteredCards.value.filter(c => favoriteCards.value.includes(c._id));
         });
         
+        const linkTargets = computed(() => {
+          if (!cards.value) return [];
+          return cards.value.filter(c => !selectedCard.value || c._id !== selectedCard.value._id);
+        });
+
         const otherCards = computed(() => {
           if (!cards.value) return [];
           let result = cards.value.filter(c => !favoriteCards.value.includes(c._id));
@@ -1787,12 +1910,14 @@
         
         function cancelLinkMode() {
           linkMode.value = false;
+          linkError.value = '';
           linkTargetId.value = '';
           linkType.value = '';
         }
         
         async function createLink() {
           if (!linkTargetId.value || !linkType.value) return;
+          linkError.value = '';
           
           try {
             const res = await fetch('/api/links', {
@@ -1815,6 +1940,7 @@
             await loadCards();
             showToast('Lien créé');
           } catch (e) {
+            linkError.value = e.message;
             showToast(e.message, 'error');
           }
         }
@@ -1890,7 +2016,10 @@
           if (e.key === 'Escape') {
             if (selectedCard.value) { selectedCard.value = null; return; }
             if (showAddModal.value) { closeAddModal(); return; }
-            if (showGraphMode.value) closeGraphMode();
+            if (showGraphMode.value) {
+              if (graphLinking.value || graphPendingLink.value) { cancelGraphLink(); return; }
+              closeGraphMode();
+            }
           }
         }
         
@@ -1913,6 +2042,7 @@
           cardComments,
           cardLinks,
           linkMode,
+          linkError,
           linkTargetId,
           linkType,
           newComment,
@@ -1937,6 +2067,7 @@
           filteredCards,
           favoritedCards,
           otherCards,
+          linkTargets,
           selectCard,
           truncate,
           formatDate,
@@ -1974,6 +2105,14 @@
           toggleGraphFilter,
           deselectGraphNode,
           openCardFromGraph,
+          graphSearch,
+          graphSearchFly,
+          graphLinking,
+          graphPendingLink,
+          graphLinkError,
+          startGraphLink,
+          cancelGraphLink,
+          confirmGraphLink,
           openGraphMode,
           closeGraphMode
         };
