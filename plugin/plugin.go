@@ -142,7 +142,11 @@ func Setup(mux *http.ServeMux, db *mongo.Database, plugins []Plugin) {
 			// Same URL convention as the Node loader: plugin assets are
 			// served at /plugin-static/<prefix>/<file>.
 			staticBase := "/plugin-static/" + strings.TrimPrefix(meta.RoutePrefix, "/") + "/"
-			mux.Handle("GET "+staticBase, http.StripPrefix(staticBase, http.FileServerFS(pctx.Web)))
+			fileServer := http.StripPrefix(staticBase, http.FileServerFS(pctx.Web))
+			mux.HandleFunc("GET "+staticBase, func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Cache-Control", "no-cache")
+				fileServer.ServeHTTP(w, r)
+			})
 		}
 		for _, alias := range meta.Aliases {
 			target := meta.RoutePrefix

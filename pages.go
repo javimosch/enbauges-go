@@ -61,11 +61,15 @@ func servePage(name string) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-cache")
 		w.Write(data)
 	}
 }
 
 func serveStatic(w http.ResponseWriter, r *http.Request) {
+	// no-cache = always revalidate (304 when unchanged): UI edits shipped
+	// via the overlay reach browsers immediately.
+	w.Header().Set("Cache-Control", "no-cache")
 	http.FileServerFS(webOverlay).ServeHTTP(w, r)
 }
 
