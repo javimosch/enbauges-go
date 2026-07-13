@@ -141,104 +141,106 @@
       </div>
     </nav>
 
-    <section class="enbauges-hero" style="background: white; border-bottom: 1px solid var(--enbauges-brown-light);">
-      <div class="enbauges-container" style="padding-top: 1rem; padding-bottom: 1rem;">
-        <button 
-          @click="toggleAbout"
-          style="display: flex; align-items: center; gap: 0.5rem; background: none; border: none; cursor: pointer; color: var(--enbauges-sage); font-weight: 500; font-size: 0.9375rem; width: 100%; text-align: left; padding: 0.5rem 0;"
-        >
+    <!-- Landing hero -->
+    <section class="eb-hero">
+      <div class="enbauges-container">
+        <div class="eb-hero__inner">
+          <h1 class="eb-hero__title">La carte vivante<br>du <span class="eb-hero__accent">Cœur des Bauges</span></h1>
+          <p class="eb-hero__sub">
+            Acteurs, solutions et initiatives du territoire — rendus visibles et reliés par les habitants.
+            Sans compte, en moins d'une minute.
+          </p>
+          <div class="eb-hero__ctas">
+            <button class="enbauges-btn-primary eb-hero__cta" @click="showAddModal = true">+ Ajouter une carte</button>
+            <button class="enbauges-btn-secondary eb-hero__cta graph-mode-btn" @click="openGraphMode">✨ Explorer la constellation</button>
+          </div>
+          <div class="eb-hero__stats">
+            <span><strong>{{ totalCards }}</strong> cartes</span>
+            <span class="eb-hero__dot">·</span>
+            <span><strong>{{ totalLinks }}</strong> {{ totalLinks === 1 ? 'lien' : 'liens' }}</span>
+            <span class="eb-hero__dot">·</span>
+            <span><strong>7</strong> services</span>
+          </div>
+        </div>
+      </div>
+      <svg class="eb-hero__mountains" viewBox="0 0 1440 110" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,110 L0,74 L120,38 L240,66 L360,22 L480,58 L600,10 L740,52 L860,30 L980,64 L1100,26 L1240,60 L1340,42 L1440,70 L1440,110 Z" fill="#7A9E7E" opacity="0.16"/>
+        <path d="M0,110 L0,92 L160,58 L300,84 L440,44 L580,76 L720,34 L880,72 L1020,50 L1180,82 L1320,58 L1440,86 L1440,110 Z" fill="#7A9E7E" opacity="0.28"/>
+      </svg>
+    </section>
+
+    <!-- Comment ça marche : 3 pas + les 3 familles + les services -->
+    <section class="eb-how" :class="{ 'eb-how--folded': aboutFolded }">
+      <div class="enbauges-container">
+        <button class="eb-how__toggle" @click="toggleAbout">
           <span>Comment ça marche ?</span>
-          <svg 
-            width="16" 
-            height="16" 
-            viewBox="0 0 16 16" 
-            fill="currentColor"
-            :style="{ transform: aboutFolded ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms ease' }"
-          >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"
+            :style="{ transform: aboutFolded ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms ease' }">
             <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        
-        <div v-show="!aboutFolded" style="padding-top: 0.5rem;">
-          <p style="font-size: 0.9375rem; color: var(--enbauges-brown); margin-bottom: 0.75rem; line-height: 1.6;">
-            EnBauges est la <strong>carte vivante du Cœur des Bauges</strong> : les acteurs, solutions et initiatives du territoire, rendus visibles et reliés entre eux.
-          </p>
-          <p style="font-size: 0.9375rem; color: var(--enbauges-brown); line-height: 1.6;">
-            Explorez, ajoutez des cartes et connectez-les entre elles pour révéler les liens qui font la force du territoire.
-          </p>
 
-          <div style="background: var(--enbauges-sage); color: white; border-radius: 0.75rem; padding: 0.875rem 1.125rem; margin-bottom: 1rem;">
-            <div style="font-weight: 600; margin-bottom: 0.25rem; font-size: 0.9375rem;">Une carte, c'est simple :</div>
-            <div style="font-size: 0.875rem;">Un nom, quelques mots pour dire ce que c'est — le reste est optionnel.</div>
+        <div v-show="!aboutFolded" class="eb-how__body">
+          <div class="eb-steps">
+            <div class="eb-step">
+              <div class="eb-step__num" style="background: var(--enbauges-terracotta);">1</div>
+              <h3>Ajoutez une carte</h3>
+              <p>Un nom, quelques mots, comme vous le diriez à un voisin. Pas de compte, pas de formulaire interminable.</p>
+            </div>
+            <div class="eb-step">
+              <div class="eb-step__num" style="background: var(--enbauges-sage);">2</div>
+              <h3>Reliez-la aux autres</h3>
+              <p>Les liens entre cartes font la valeur : qui utilise quoi, qui renforce qui. Explorez-les dans la constellation.</p>
+            </div>
+            <div class="eb-step">
+              <div class="eb-step__num" style="background: var(--enbauges-amber);">3</div>
+              <h3>La communauté fait le tri</h3>
+              <p>Votes, commentaires, corrections : tout est ouvert, la communauté ajuste. Confiance par défaut.</p>
+            </div>
           </div>
 
-          <div style="background: var(--enbauges-cream); border-radius: 0.75rem; padding: 0.875rem 1.125rem; margin-bottom: 1rem;">
-            <div style="font-size: 0.875rem; color: var(--enbauges-earth); font-weight: 500;">
-              Tout le monde peut contribuer.
-            </div>
-            <div style="font-size: 0.875rem; color: var(--enbauges-sage); font-weight: 500;">
-              Aucune inscription n'est nécessaire.
-            </div>
-          </div>
-          
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
-            <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
-              <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--enbauges-terracotta); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="white">
-                  <circle cx="10" cy="6" r="4"/>
-                  <path d="M2 18c0-4 4-6 8-6s8 2 8 6"/>
-                </svg>
+          <div class="eb-types">
+            <div class="eb-type">
+              <div class="eb-type__icon" style="background: var(--enbauges-terracotta);">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="white"><circle cx="10" cy="6" r="4"/><path d="M2 18c0-4 4-6 8-6s8 2 8 6"/></svg>
               </div>
               <div>
-                <div style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.125rem;">Acteurs</div>
-                <div style="font-size: 0.8125rem; color: var(--enbauges-brown);">Personnes, associations, collectivites</div>
+                <div class="eb-type__name">Acteurs</div>
+                <div class="eb-type__desc">Personnes, associations, artisans, collectivités</div>
               </div>
             </div>
-            
-            <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
-              <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--enbauges-sage); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="white">
-                  <path d="M10 2l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6l2-6z"/>
-                </svg>
+            <div class="eb-type">
+              <div class="eb-type__icon" style="background: var(--enbauges-sage);">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="white"><path d="M10 2l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6l2-6z"/></svg>
               </div>
               <div>
-                <div style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.125rem;">Solutions</div>
-                <div style="font-size: 0.8125rem; color: var(--enbauges-brown);">Outils, methodes, pratiques</div>
+                <div class="eb-type__name">Solutions</div>
+                <div class="eb-type__desc">Outils, méthodes, pratiques qui marchent</div>
               </div>
             </div>
-            
-            <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
-              <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--enbauges-amber); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="var(--enbauges-earth)">
-                  <path d="M10 2l8 4v6c0 4-4 7-8 8-4-1-8-4-8-8V6l8-4z"/>
-                </svg>
+            <div class="eb-type">
+              <div class="eb-type__icon" style="background: var(--enbauges-amber);">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="var(--enbauges-earth)"><path d="M10 2l8 4v6c0 4-4 7-8 8-4-1-8-4-8-8V6l8-4z"/></svg>
               </div>
               <div>
-                <div style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.125rem;">Initiatives</div>
-                <div style="font-size: 0.8125rem; color: var(--enbauges-brown);">Projets emergent de la communaute</div>
+                <div class="eb-type__name">Initiatives</div>
+                <div class="eb-type__desc">Projets qui émergent de la communauté</div>
               </div>
             </div>
           </div>
-          
-          <div style="background: var(--enbauges-cream); border-radius: 0.75rem; padding: 1rem 1.25rem; margin-bottom: 1rem;">
-            <div style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.5rem; font-size: 0.9375rem;">Comment contribuer ?</div>
-            <ol style="margin: 0; padding-left: 1.25rem; font-size: 0.875rem; color: var(--enbauges-brown); line-height: 1.7;">
-              <li>Cliquez sur <strong>+ Ajouter une carte</strong> pour déclarer un acteur, solution ou initiative</li>
-              <li>Décrivez-la <strong>en quelques mots</strong>, comme vous le diriez à un voisin</li>
-              <li>Votez pour les cartes qui vous semblent utiles</li>
-              <li>Connectez les cartes entre elles pour créer du lien</li>
-            </ol>
-          </div>
-          
-          <div style="background: var(--enbauges-cream); border-radius: 0.75rem; padding: 1rem 1.25rem;">
-            <div style="font-size: 0.875rem; color: var(--enbauges-brown); line-height: 1.7;">
-              Tout ce qui vit sur le territoire a sa place : associations, artisans, producteurs, services, projets, idées.
-            </div>
-            <div style="font-size: 0.8125rem; color: var(--enbauges-sage); line-height: 1.6; margin-top: 0.75rem; font-style: italic;">
-              La valeur d'une carte vient de sa clarté et des liens qu'elle crée avec les autres — la communauté vote et corrige.
-            </div>
-            <div style="font-size: 0.8125rem; color: var(--enbauges-brown); line-height: 1.6; margin-top: 0.75rem;">
-              <strong>Services :</strong> Vous pouvez aussi ajouter des services (foodtruck, artisan...) comme acteurs. <a href="/annuaire" style="color: var(--enbauges-sage);">Voir l'annuaire</a> du territoire.
+
+          <div class="eb-services">
+            <div class="eb-services__label">Les services du territoire</div>
+            <div class="eb-services__chips">
+              <a href="/agenda" class="eb-chip">📅 Agenda</a>
+              <a href="/annuaire" class="eb-chip">📖 Annuaire</a>
+              <a href="/calendrier" class="eb-chip">🗓 Calendrier partagé</a>
+              <a href="/covoiturage" class="eb-chip">🚗 Covoiturage</a>
+              <a href="/perdu-trouve" class="eb-chip">🔑 Perdu / trouvé</a>
+              <a href="/carte-interactive" class="eb-chip">🗺 Carte interactive</a>
+              <a href="/panier-libre" class="eb-chip">🧺 Panier libre</a>
+              <a href="/chat" class="eb-chip">💬 Chat</a>
+              <a href="/open-panneau" class="eb-chip">📢 Open Panneau</a>
             </div>
           </div>
         </div>
@@ -1025,6 +1027,8 @@
     const app = createApp({
       setup() {
         const cards = ref([]);
+        const totalCards = ref(0);
+        const totalLinks = ref(0);
         const loading = ref(true);
         const filterType = ref('all');
         const sortBy = ref('recent');
@@ -1659,6 +1663,7 @@
             const res = await fetch('/api/cards?' + params.toString());
             const data = await res.json();
             cards.value = data.cards || [];
+            if (data.total !== undefined) totalCards.value = data.total;
           } catch (e) {
             console.error('Failed to load cards:', e);
           } finally {
@@ -2076,11 +2081,14 @@
         onMounted(() => {
           console.log('🔍 [DEBUG] App mounted, showMapPicker value:', showMapPicker.value);
           loadCards();
+          fetch('/api/links').then(r => r.json()).then(d => { totalLinks.value = (d.links || []).length; }).catch(() => {});
           window.addEventListener('keydown', handleKeydown);
         });
         
         return {
           cards,
+          totalCards,
+          totalLinks,
           loading,
           filterType,
           sortBy,
