@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activité des bénévoles — La Commune des Bauges</title>
+  <meta name="description" content="Suivez l'activité quotidienne des bénévoles virtuels qui enrichissent La Commune des Bauges.">
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="/css/enbauges.css" rel="stylesheet">
+  <style>
+    .activity-feed { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    .activity-header { text-align: center; margin-bottom: 2rem; }
+    .activity-header h1 { font-size: 1.75rem; color: var(--enbauges-earth); margin-bottom: 0.5rem; }
+    .activity-header p { color: var(--enbauges-stone); font-size: 0.95rem; }
+    .activity-card {
+      background: var(--enbauges-cream);
+      border-left: 3px solid var(--enbauges-sage);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    .activity-card__avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 1.1rem;
+      color: white;
+      flex-shrink: 0;
+    }
+    .activity-card__body { flex: 1; }
+    .activity-card__agent { font-weight: 600; color: var(--enbauges-earth); font-size: 0.95rem; }
+    .activity-card__detail { color: var(--enbauges-stone); font-size: 0.9rem; margin-top: 0.25rem; }
+    .activity-card__meta { font-size: 0.75rem; color: var(--enbauges-stone-light); margin-top: 0.5rem; display: flex; gap: 1rem; }
+    .activity-card__meta span { display: inline-flex; align-items: center; gap: 0.25rem; }
+    .activity-badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .activity-badge--created { background: #d4edda; color: #155724; }
+    .activity-badge--scraped { background: #d1ecf1; color: #0c5460; }
+    .activity-badge--discovered { background: #fff3cd; color: #856404; }
+    .activity-badge--improved { background: #f8d7da; color: #721c24; }
+    .activity-badge--enriched { background: #e2d5f1; color: #4a235a; }
+    .activity-badge--other { background: #e9ecef; color: #495057; }
+    .activity-empty { text-align: center; padding: 3rem 1rem; color: var(--enbauges-stone); }
+    .activity-date-sep {
+      text-align: center;
+      color: var(--enbauges-stone-light);
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 1.5rem 0 0.75rem;
+      position: relative;
+    }
+    .activity-date-sep::before,
+    .activity-date-sep::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 30%;
+      height: 1px;
+      background: var(--enbauges-stone-light);
+      opacity: 0.3;
+    }
+    .activity-date-sep::before { left: 5%; }
+    .activity-date-sep::after { right: 5%; }
+  </style>
+<script defer src="https://vigie.intrane.fr/vigie.js"></script>
+</head>
+<body>
+  <nav class="enbauges-navbar">
+    <div class="enbauges-container">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 0;">
+        <a href="/" class="enbauges-brand" style="text-decoration: none;">
+          <svg class="enbauges-brand__logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="16" cy="16" r="14" fill="#7A9E7E"/>
+            <path d="M16 8C12 8 8 12 8 16C8 20 12 24 16 24C20 24 24 20 24 16" stroke="#FAF7F2" stroke-width="2" stroke-linecap="round"/>
+            <path d="M16 8C20 8 24 12 24 16C24 20 20 24 16 24" stroke="#D4A03C" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="3" fill="#FAF7F2"/>
+          </svg>
+          <span style="font-weight: 700; font-size: 1.125rem; color: var(--enbauges-earth);">La Commune des Bauges</span>
+        </a>
+        <div style="display: flex; gap: 0.75rem;">
+          <a href="/" class="enbauges-btn-secondary" style="text-decoration: none;">← Retour</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="activity-feed">
+    <div class="activity-header">
+      <h1>Activité des bénévoles</h1>
+      <p>Les bénévoles virtuels de La Commune des Bauges travaillent en coulisses pour enrichir le territoire.</p>
+    </div>
+
+    {{if not .Activities}}
+      <div class="activity-empty">
+        <p>Les bénévoles n'ont pas encore reporté d'activité.</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Revenez bientôt !</p>
+      </div>
+    {{else}}
+      {{$prevDate := ""}}
+      {{range .Activities}}
+        {{$date := .CreatedAt.Format "2006-01-02"}}
+        {{if ne $date $prevDate}}
+          <div class="activity-date-sep">{{$date}}</div>
+        {{end}}
+        {{$prevDate = $date}}
+
+        <div class="activity-card">
+          <div class="activity-card__avatar" style="background: {{if eq .Agent "Aurélie"}}#4A6B5D{{else if eq .Agent "Bastien"}}#3B6B8A{{else if eq .Agent "Camille"}}#C89530{{else if eq .Agent "Élodie"}}#8B8275{{else if eq .Agent "Florent"}}#2D4A3E{{else}}#4A6B5D{{end}}">
+            {{printf "%.1s" .Agent}}
+          </div>
+          <div class="activity-card__body">
+            <div class="activity-card__agent">{{.Agent}}</div>
+            <div class="activity-card__detail">{{.Detail}}</div>
+            <div class="activity-card__meta">
+              <span>
+                {{if eq .Action "created"}}<span class="activity-badge activity-badge--created">créé</span>
+                {{else if eq .Action "scraped"}}<span class="activity-badge activity-badge--scraped">scrapé</span>
+                {{else if eq .Action "discovered"}}<span class="activity-badge activity-badge--discovered">découvert</span>
+                {{else if eq .Action "improved"}}<span class="activity-badge activity-badge--improved">amélioré</span>
+                {{else if eq .Action "enriched"}}<span class="activity-badge activity-badge--enriched">enrichi</span>
+                {{else}}<span class="activity-badge activity-badge--other">{{.Action}}</span>{{end}}
+              </span>
+              {{if gt .Items 0}}<span>📊 {{.Items}} élément(s)</span>{{end}}
+              <span>🔄 {{.Loop}}</span>
+              <span>🕐 {{.CreatedAt.Format "15:04"}}</span>
+            </div>
+          </div>
+        </div>
+      {{end}}
+    {{end}}
+  </div>
+
+  <footer class="enbauges-footer" style="text-align: center; padding: 2rem 1rem; color: var(--enbauges-stone-light); font-size: 0.85rem;">
+    <p>La Commune des Bauges — Cœur des Bauges, Massif des Bauges, Savoie</p>
+  </footer>
+</body>
+</html>

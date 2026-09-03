@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Canvas - Enbauges</title>
-  <meta name="description" content="La carte vivante des acteurs, solutions et initiatives du Cœur des Bauges">
+  <title>La Commune des Bauges — Cœur des Bauges, Savoie</title>
+  <meta name="description" content="La commune des Bauges : 13 communes, leurs acteurs, services et événements. La carte vivante du territoire du Cœur des Bauges en Savoie.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -20,6 +20,7 @@
     @media (max-width: 767px) { .graph-mode-btn { display: none !important; } }
     #cy { width: 100%; height: 100%; }
   </style>
+<script defer src="https://vigie.intrane.fr/vigie.js"></script>
 </head>
 <body>
   <div id="app" v-cloak>
@@ -119,7 +120,7 @@
               <path d="M16 8C20 8 24 12 24 16C24 20 20 24 16 24" stroke="#D4A03C" stroke-width="2" stroke-linecap="round"/>
               <circle cx="16" cy="16" r="3" fill="#FAF7F2"/>
             </svg>
-            <span style="font-weight: 700; font-size: 1.125rem; color: var(--enbauges-earth);">Enbauges</span>
+            <span style="font-weight: 700; font-size: 1.125rem; color: var(--enbauges-earth);">La Commune des Bauges</span>
           </a>
           <div style="display: flex; gap: 0.75rem;">
             <button class="enbauges-btn-secondary graph-mode-btn" @click="openGraphMode" style="display: inline-flex; align-items: center; gap: 0.375rem;">
@@ -145,27 +146,28 @@
     <section class="eb-hero">
       <div class="enbauges-container">
         <div class="eb-hero__inner">
-          <h1 class="eb-hero__title">La carte vivante<br>du <span class="eb-hero__accent">Cœur des Bauges</span></h1>
+          <h1 class="eb-hero__title">La Commune des Bauges</h1>
           <p class="eb-hero__sub">
-            Acteurs, solutions et initiatives du territoire — rendus visibles et reliés par les habitants.
-            Sans compte, en moins d'une minute.
+            Le territoire du Cœur des Bauges — 13 communes, ses acteurs, ses services, ses événements.
+            Reliés par ceux qui y vivent. Sans compte, en moins d'une minute.
           </p>
           <div class="eb-hero__ctas">
             <button class="enbauges-btn-primary eb-hero__cta" @click="showAddModal = true">+ Ajouter une carte</button>
+            <a href="/calendrier" class="enbauges-btn-secondary eb-hero__cta" style="text-decoration: none;">📅 Calendrier</a>
             <button class="enbauges-btn-secondary eb-hero__cta graph-mode-btn" @click="openGraphMode">✨ Explorer la constellation</button>
           </div>
           <div class="eb-hero__stats">
+            <span><strong>14</strong> communes</span>
+            <span class="eb-hero__dot">·</span>
             <span><strong>{{ totalCards }}</strong> cartes</span>
             <span class="eb-hero__dot">·</span>
             <span><strong>{{ totalLinks }}</strong> {{ totalLinks === 1 ? 'lien' : 'liens' }}</span>
-            <span class="eb-hero__dot">·</span>
-            <span><strong>7</strong> services</span>
           </div>
         </div>
       </div>
       <svg class="eb-hero__mountains" viewBox="0 0 1440 110" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M0,110 L0,74 L120,38 L240,66 L360,22 L480,58 L600,10 L740,52 L860,30 L980,64 L1100,26 L1240,60 L1340,42 L1440,70 L1440,110 Z" fill="#7A9E7E" opacity="0.16"/>
-        <path d="M0,110 L0,92 L160,58 L300,84 L440,44 L580,76 L720,34 L880,72 L1020,50 L1180,82 L1320,58 L1440,86 L1440,110 Z" fill="#7A9E7E" opacity="0.28"/>
+        <path d="M0,110 L0,74 L120,38 L240,66 L360,22 L480,58 L600,10 L740,52 L860,30 L980,64 L1100,26 L1240,60 L1340,42 L1440,70 L1440,110 Z" fill="#3A4D38" opacity="0.2"/>
+        <path d="M0,110 L0,92 L160,58 L300,84 L440,44 L580,76 L720,34 L880,72 L1020,50 L1180,82 L1320,58 L1440,86 L1440,110 Z" fill="#2D4A3E" opacity="0.35"/>
       </svg>
     </section>
 
@@ -794,14 +796,14 @@
       </div>
     </div>
 
-        <div v-if="selectedCard && !isEditMode" class="enbauges-modal-backdrop" @click.self="selectedCard = null">
+        <div v-if="selectedCard && !isEditMode" class="enbauges-modal-backdrop" @click.self="closeCardDetail">
       <div class="enbauges-modal" style="max-width: 44rem;">
         <div class="enbauges-modal__header">
           <div style="display: flex; align-items: center; justify-content: space-between;">
             <span :class="'enbauges-badge-' + selectedCard.type">
               {{ selectedCard.type === 'actor' ? 'Acteur' : selectedCard.type === 'solution' ? 'Solution' : 'Initiative' }}
             </span>
-            <button @click="selectedCard = null" style="background: none; border: none; cursor: pointer; padding: 0.5rem;">
+            <button @click="closeCardDetail" style="background: none; border: none; cursor: pointer; padding: 0.5rem;">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="var(--enbauges-brown)">
                 <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
@@ -1678,6 +1680,8 @@
             selectedCard.value = data.card;
             cardComments.value = data.comments || [];
             cardLinks.value = data.links || [];
+            // Update URL hash for deep-linking / sharing
+            history.replaceState(null, '', '/#/card/' + cardId);
           } catch (e) {
             console.error('Failed to load card detail:', e);
           }
@@ -1688,6 +1692,14 @@
           linkMode.value = false;
           linkTargetId.value = '';
           linkType.value = '';
+        }
+
+        function closeCardDetail() {
+          selectedCard.value = null;
+          cardComments.value = [];
+          cardLinks.value = [];
+          // Clear URL hash
+          history.replaceState(null, '', '/');
         }
         
         function truncate(text, length) {
@@ -2069,7 +2081,7 @@
         
         function handleKeydown(e) {
           if (e.key === 'Escape') {
-            if (selectedCard.value) { selectedCard.value = null; return; }
+            if (selectedCard.value) { closeCardDetail(); return; }
             if (showAddModal.value) { closeAddModal(); return; }
             if (showGraphMode.value) {
               if (graphLinking.value || graphPendingLink.value) { cancelGraphLink(); return; }
@@ -2080,7 +2092,14 @@
         
         onMounted(() => {
           console.log('🔍 [DEBUG] App mounted, showMapPicker value:', showMapPicker.value);
-          loadCards();
+          loadCards().then(() => {
+            // Deep-link: check URL hash for /card/<id> and auto-open
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#/card/')) {
+              const cardId = hash.replace('#/card/', '');
+              loadCardDetail(cardId);
+            }
+          });
           fetch('/api/links').then(r => r.json()).then(d => { totalLinks.value = (d.links || []).length; }).catch(() => {});
           window.addEventListener('keydown', handleKeydown);
         });
@@ -2127,6 +2146,7 @@
           otherCards,
           linkTargets,
           selectCard,
+          closeCardDetail,
           truncate,
           formatDate,
           hasVoted,
