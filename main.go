@@ -96,11 +96,18 @@ func main() {
 	mux.HandleFunc("GET /api/export/events.json", handleExportEventsJSON)
 	mux.HandleFunc("GET /api/export/events.ics", handleExportEventsICS)
 
+	// Team activity feed (virtual volunteers)
+	mux.HandleFunc("GET /api/activity", handleListActivity)
+	mux.HandleFunc("POST /api/activity", handleCreateActivity)
+
 	// Pages
 	mux.HandleFunc("GET /{$}", servePage("canvas.html"))
 	mux.HandleFunc("GET /canvas", servePage("canvas.html"))
-	mux.HandleFunc("GET /agenda", handleAgendaPage)
+	mux.HandleFunc("GET /agenda", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/calendrier", http.StatusMovedPermanently)
+	})
 	mux.HandleFunc("GET /annuaire", handleAnnuairePage)
+	mux.HandleFunc("GET /team/activity", handleTeamActivityPage)
 	mux.HandleFunc("GET /donnees-ouvertes", servePage("open-data.html"))
 	mux.HandleFunc("GET /legal", servePage("legal.html"))
 	mux.HandleFunc("GET /privacy", servePage("privacy.html"))
@@ -115,7 +122,22 @@ func main() {
 	plugin.SetupProxies(mux, os.Getenv("PLUGIN_PROXY"))
 
 	log.Printf("enbauges-go listening on :%s (db=%s)", port, dbName)
-	log.Fatal(http.ListenAndServe(":"+port, mux))
+	log.Fatal(http.ListenAndServe(":"+port, corsMiddleware(mux)))
+}
+
+// corsMiddleware adds permissive CORS headers for cross-origin reads from
+// partner sites (e.g. veilleursdesbauges.fr embedding the shared calendar).
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(204)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func ensureIndexes(ctx context.Context) {
@@ -124,8 +146,10 @@ func ensureIndexes(ctx context.Context) {
 	l := db.Collection("links")
 	co := db.Collection("comments")
 	e := db.Collection("orgevents")
+	a := db.Collection("activities")
 	_, _ = c.Indexes().CreateMany(ctx, cardIndexes())
 	_, _ = l.Indexes().CreateMany(ctx, linkIndexes())
 	_, _ = co.Indexes().CreateMany(ctx, commentIndexes())
 	_, _ = e.Indexes().CreateMany(ctx, eventIndexes())
+	_, _ = a.Indexes().CreateMany(ctx, activityIndexes())
 }
