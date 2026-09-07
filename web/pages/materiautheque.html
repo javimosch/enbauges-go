@@ -87,7 +87,7 @@
               </div>
               <div class="mat-card__meta">{{ label(it.category) }} · {{ it.commune }}<span v-if="it.quantity"> · {{ it.quantity }}</span></div>
               <div style="font-size:.9rem;white-space:pre-line">{{ it.description }}</div>
-              <div class="mat-contact"><strong>Contact :</strong> {{ it.contact }}</div>
+              <div class="mat-contact"><span v-if="it.nickname"><strong>{{ it.nickname }}</strong> · </span><strong>Contact :</strong> {{ it.contact }}</div>
               <div class="mat-card__meta">Publié le {{ date(it.approved_at) }}<a v-if="it.register_id && meta.register" :href="meta.register + '#/entry/' + it.register_id" target="_blank" rel="noopener" style="margin-left:.4rem" title="Voir dans le registre public">⛓ registre</a></div>
             </div>
           </article>
@@ -113,6 +113,10 @@
             <div><label>Don ou prêt *</label><select v-model="form.mode" required><option value="don">Don</option><option value="pret">Prêt</option></select></div>
             <div><label>Quantité</label><input v-model.trim="form.quantity" maxlength="40" placeholder="Ex : 3 planches de 2 m"></div>
           </div>
+          <div class="row">
+            <div><label>Prénom ou surnom (affiché)</label><input v-model.trim="form.nickname" maxlength="40" placeholder="Ex : Javi"></div>
+            <div></div>
+          </div>
           <div><label>Contact (affiché publiquement) *</label><input v-model.trim="form.contact" maxlength="120" placeholder="06 …, prenom@…, ou « à la mairie du Châtelard »" required></div>
           <div><label>Photo (lien, optionnel)</label><input v-model.trim="form.photo_url" maxlength="500" placeholder="https://…"></div>
           <input class="hp" type="text" name="website" v-model="form.website" tabindex="-1" autocomplete="off">
@@ -126,7 +130,7 @@
         <p class="mat-note" v-if="admin.pending.length === 0">Aucune proposition en attente.</p>
         <table v-else><tr v-for="p in admin.pending" :key="p.id"><td><strong>{{ p.title }}</strong><br><span class="mat-note">{{ label(p.category) }} · {{ p.commune }} · {{ p.mode }} · {{ p.contact }}</span><br><span style="white-space:pre-line">{{ p.description }}</span></td><td style="white-space:nowrap"><button class="mat-btn-sm" @click="moderate('approve', p.id)">✔ Publier</button> <button class="mat-btn-sm" @click="moderate('reject', p.id)">✘ Refuser</button></td></tr></table>
         <p class="mat-note" style="margin-top:.8rem">Objets publiés : changer le statut</p>
-        <table><tr v-for="it in items" :key="it.id"><td>{{ it.title }} <span class="mat-note">({{ it.status }})</span></td><td style="white-space:nowrap"><button class="mat-btn-sm" v-for="s in meta.statuses" :key="s" :disabled="it.status===s" @click="moderate('status', it.id, {status: s})">{{ s }}</button> <button class="mat-btn-sm" @click="moderate('remove', it.id)">supprimer</button></td></tr></table>
+        <table><tr v-for="it in items" :key="it.id"><td>{{ it.title }} <span class="mat-note">({{ it.status }}<span v-if="it.nickname"> · {{ it.nickname }}</span>)</span> <button class="mat-btn-sm" @click="editItem(it)">✎</button></td><td style="white-space:nowrap"><button class="mat-btn-sm" v-for="s in meta.statuses" :key="s" :disabled="it.status===s" @click="moderate('status', it.id, {status: s})">{{ s }}</button> <button class="mat-btn-sm" @click="moderate('remove', it.id)">supprimer</button></td></tr></table>
       </section>
     </div>
   </main>
@@ -143,7 +147,7 @@ const LABELS = {bois:'Bois',metal:'Métal',isolation:'Isolation',menuiserie:'Men
 const ICONS = {bois:'🪵',metal:'🔩',isolation:'🧶',menuiserie:'🚪',plomberie:'🚰',electricite:'💡',carrelage:'🧱',peinture:'🎨',outillage:'🔧',mobilier:'🪑',jardin:'🌱',autre:'📦'};
 Vue.createApp({
   data(){ return { view:'list', loading:true, items:[], meta:{categories:[],communes:[],modes:[],statuses:[],register:''}, filter:{category:'',commune:'',mode:'',showGone:false},
-    form:{title:'',description:'',category:'',commune:'',mode:'don',quantity:'',contact:'',photo_url:'',website:''}, sending:false, error:'',
+    form:{title:'',description:'',category:'',commune:'',mode:'don',quantity:'',contact:'',photo_url:'',nickname:'',website:''}, sending:false, error:'',
     toast:{show:false,message:'',type:'info'}, admin:{token:'',pending:[]} } },
   computed:{ shown(){ return this.items.filter(i => (this.filter.showGone || i.status !== 'parti') && (!this.filter.category || i.category===this.filter.category) && (!this.filter.commune || i.commune===this.filter.commune) && (!this.filter.mode || i.mode===this.filter.mode)); } },
   methods:{
@@ -154,9 +158,10 @@ Vue.createApp({
     async load(){ this.loading=true; try { const [m,l]=await Promise.all([fetch(API+'?view=meta').then(r=>r.json()), fetch(API).then(r=>r.json())]); this.meta=m; this.items=l.items||[]; } catch(e){ this.say('Impossible de charger les annonces','error') } this.loading=false },
     async submit(){ this.sending=true; this.error='';
       try { const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'propose',item:this.form,website:this.form.website})}); const d=await r.json();
-        if(!d.ok){ this.error=d.error||'Erreur'; } else { this.say('Merci ! Votre annonce sera publiée après relecture.','success'); this.form={title:'',description:'',category:'',commune:'',mode:'don',quantity:'',contact:'',photo_url:'',website:''}; this.view='list'; }
+        if(!d.ok){ this.error=d.error||'Erreur'; } else { this.say('Merci ! Votre annonce sera publiée après relecture.','success'); this.form={title:'',description:'',category:'',commune:'',mode:'don',quantity:'',contact:'',photo_url:'',nickname:'',website:''}; this.view='list'; }
       } catch(e){ this.error='Réseau indisponible' } this.sending=false },
     async loadPending(){ try { const r=await fetch(API+'?view=pending',{headers:{'X-Admin-Token':this.admin.token}}); if(r.status===401){ this.say('Jeton de modération refusé','error'); this.admin.token=''; localStorage.removeItem('mat_admin'); return } const d=await r.json(); this.admin.pending=d.items||[] } catch(e){} },
+    async editItem(it){ const title=prompt('Titre', it.title); if(title===null) return; const nickname=prompt('Prénom ou surnom (vide = aucun)', it.nickname||''); if(nickname===null) return; const mode=prompt('don ou pret', it.mode); if(mode===null) return; await this.moderate('edit', it.id, {fields:{title, nickname, mode}}); },
     async moderate(action,id,extra){ try { const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Token':this.admin.token},body:JSON.stringify(Object.assign({action,id},extra||{}))}); const d=await r.json(); this.say(d.ok ? 'Fait' + (d.register && d.register.id ? ' — inscrit au registre' : '') : (d.error||'Erreur'), d.ok?'success':'error'); await this.load(); await this.loadPending(); } catch(e){ this.say('Erreur réseau','error') } }
   },
   async mounted(){ const h=new URLSearchParams(location.hash.slice(1)); if(h.get('admin')){ localStorage.setItem('mat_admin',h.get('admin')); history.replaceState(null,'',location.pathname) } this.admin.token=localStorage.getItem('mat_admin')||''; await this.load(); if(this.admin.token) this.loadPending(); }
