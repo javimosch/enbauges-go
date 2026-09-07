@@ -157,9 +157,9 @@
         <div v-else-if="reg.error" class="verify-bad">{{ reg.error }}</div>
 
         <div v-else-if="reg.tab==='objets'">
-          <div class="mat-filters"><select v-model="reg.focus"><option value="">Tous les objets</option><option v-for="o in objects" :value="o.id">{{ o.title }}</option></select><span class="mat-note">{{ objects.length }} objet{{ objects.length>1?'s':'' }} passés par la matériauthèque</span></div>
+          <div class="mat-filters"><select v-model="reg.focus"><option value="">Tous les objets</option><option v-for="o in visibleObjects" :value="o.id">{{ o.title }}</option></select><label style="font-size:.85rem"><input type="checkbox" v-model="reg.showRemoved"> afficher les objets retirés</label><span class="mat-note">{{ visibleObjects.length }} objet{{ visibleObjects.length>1?'s':'' }} passés par la matériauthèque</span></div>
           <div class="reg-cols">
-            <div class="reg-box" v-for="o in objects.filter(o => !reg.focus || o.id===reg.focus)" :key="o.id" :id="'obj-'+o.id">
+            <div class="reg-box" v-for="o in visibleObjects.filter(o => !reg.focus || o.id===reg.focus)" :key="o.id" :id="'obj-'+o.id">
               <h3>{{ o.title }} <span class="mat-note" style="font-weight:400">· {{ label(o.category) }} · {{ o.commune }}</span></h3>
               <ul class="tl"><li v-for="ev in o.events" :key="ev.id" :class="ev.cls"><div>{{ ev.text }}<a class="blk" :href="meta.register + '#/block/' + ev.height" target="_blank" rel="noopener" title="bloc {{ev.height}}">bloc {{ ev.height }}</a></div><div class="when">{{ ev.when }}</div></li></ul>
             </div>
@@ -221,10 +221,11 @@ const ICONS = {bois:'🪵',metal:'🔩',isolation:'🧶',menuiserie:'🚪',plomb
 Vue.createApp({
   data(){ return { view:'list', loading:true, items:[], meta:{categories:[],communes:[],modes:[],statuses:[],register:''}, filter:{category:'',commune:'',mode:'',showGone:false},
     form:{title:'',description:'',category:'',commune:'',mode:'don',quantity:'',contact:'',photo_url:'',nickname:'',website:''}, sending:false, error:'',
-    toast:{show:false,message:'',type:'info'}, admin:{token:'',pending:[]}, reg:{tab:'objets',loading:false,error:'',entries:[],focus:'',commune:'',month:'',verifying:false,verdict:null} } },
+    toast:{show:false,message:'',type:'info'}, admin:{token:'',pending:[]}, reg:{tab:'objets',loading:false,error:'',entries:[],focus:'',commune:'',month:'',showRemoved:false,verifying:false,verdict:null} } },
   computed:{
     regBase(){ return (this.meta.register||'').replace(/\/ui\/?$/,'') },
     objects(){ const by={}; for(const e of this.reg.entries){ let p={}; try{p=JSON.parse(e.payload)}catch(_){} const id=(p.id||'').split(' ')[0]; if(!id) continue; if(!by[id]) by[id]={id, title:p.title||'(sans titre)', category:'', commune:'', events:[]}; if(p.category) by[id].category=p.category; if(p.commune) by[id].commune=p.commune; if(p.title) by[id].title=p.title; by[id].events.push(this.describe(e,p)); } return Object.values(by).sort((a,b)=>b.events[0].height-a.events[0].height) },
+    visibleObjects(){ return this.objects.filter(o => this.reg.showRemoved || this.reg.focus===o.id || !o.events.some(ev => ev.kind==='item.removed')) },
     journal(){ return this.reg.entries.map(e=>{ let p={}; try{p=JSON.parse(e.payload)}catch(_){} const d=this.describe(e,p); return Object.assign(d,{title:p.title||'', commune:p.commune||this.communeOf(p.id), by:p.by||''}) }).filter(e=>(!this.reg.commune||e.commune===this.reg.commune)&&(!this.reg.month||e.month===this.reg.month)).reverse() },
     months(){ return [...new Set(this.reg.entries.map(e=>this.monthOf(e.ts)))] },
     shown(){ return this.items.filter(i => (this.filter.showGone || i.status !== 'parti') && (!this.filter.category || i.category===this.filter.category) && (!this.filter.commune || i.commune===this.filter.commune) && (!this.filter.mode || i.mode===this.filter.mode)); } },
@@ -240,7 +241,7 @@ Vue.createApp({
       } catch(e){ this.error='Réseau indisponible' } this.sending=false },
     monthOf(ts){ const d=new Date(ts*1000); return d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}) },
     communeOf(id){ const o=this.objects.find(o=>o.id===(id||'').split(' ')[0]); return o?o.commune:'' },
-    describe(e,p){ const k=e.kind.replace('materiautheque.',''); const by=p.by?` par ${p.by}`:''; const m={ 'item.add':['Publié'+by,'add'], 'item.lent':['Prêté','lent'], 'item.available':['À nouveau disponible','add'], 'item.gone':['Parti (donné ou repris)','gone'], 'item.removed':['Retiré de la matériauthèque'+(p.reason?` — ${p.reason}`:''),'gone'], 'item.correct':['Correction'+(p.by?` : annonceur « ${p.by} »`:'')+(p.note?` (${p.note})`:''),'correct'] }; const [text,cls]=m[k]||[k,'']; return { id:e.id, height:e.height, ts:e.ts, when:new Date(e.ts*1000).toLocaleString('fr-FR',{dateStyle:'long',timeStyle:'short'}), month:this.monthOf(e.ts), text, cls } },
+    describe(e,p){ const k=e.kind.replace('materiautheque.',''); const by=p.by?` par ${p.by}`:''; const m={ 'item.add':['Publié'+by,'add'], 'item.lent':['Prêté','lent'], 'item.available':['À nouveau disponible','add'], 'item.gone':['Parti (donné ou repris)','gone'], 'item.removed':['Retiré de la matériauthèque'+(p.reason?` — ${p.reason}`:''),'gone'], 'item.correct':['Correction'+(p.by?` : annonceur « ${p.by} »`:'')+(p.note?` (${p.note})`:''),'correct'] }; const [text,cls]=m[k]||[k,'']; return { id:e.id, kind:k, height:e.height, ts:e.ts, when:new Date(e.ts*1000).toLocaleString('fr-FR',{dateStyle:'long',timeStyle:'short'}), month:this.monthOf(e.ts), text, cls } },
     async loadRegister(){ if(!this.regBase) return; this.reg.loading=true; this.reg.error=''; try{ const r=await fetch(this.regBase+'/entries?kind=materiautheque.*&limit=1000'); this.reg.entries=await r.json(); }catch(e){ this.reg.error='Le registre est injoignable pour le moment ('+e.message+'). Le catalogue, lui, fonctionne.' } this.reg.loading=false },
     openHistory(id){ this.view='registre'; this.reg.tab='objets'; this.reg.focus=id; this.loadRegister(); },
     async verify(){ this.reg.verifying=true; this.reg.verdict=null; try{ const [v,st]=await Promise.all([fetch(this.regBase+'/verify').then(r=>r.json()), fetch(this.regBase+'/status').then(r=>r.json())]); const n=this.reg.entries.length; this.reg.verdict = v.ok ? {ok:true,text:`✔ Registre intact : ${v.height+1} blocs et ${n} inscription${n>1?'s':''} de la matériauthèque, toutes les empreintes et signatures vérifiées à l'instant par le nœud « ${st.name} » (hauteur ${st.height}).`} : {ok:false,text:'✘ Le registre signale un problème : '+v.error} }catch(e){ this.reg.verdict={ok:false,text:'Vérification impossible : '+e.message} } this.reg.verifying=false },
