@@ -1,2 +1,4 @@
 enbauges-go
+enbauges-go-linux
+*.bak
 .env

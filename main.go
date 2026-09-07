@@ -65,6 +65,7 @@ func main() {
 	}
 	db = client.Database(dbName)
 	ensureIndexes(context.Background())
+	backfillSlugs(context.Background())
 
 	mux := http.NewServeMux()
 
@@ -75,6 +76,10 @@ func main() {
 	mux.HandleFunc("PUT /api/cards/{id}", handleUpdateCard)
 	mux.HandleFunc("DELETE /api/cards/{id}", handleDeleteCard)
 	mux.HandleFunc("POST /api/cards/{id}/vote", handleVote)
+	mux.HandleFunc("POST /api/cards/{id}/images", handleUploadImage)
+	mux.HandleFunc("DELETE /api/cards/{id}/images", handleDeleteImage)
+	mux.HandleFunc("POST /api/cards/{id}/feature", requireAdmin(handleFeatureCard(true)))
+	mux.HandleFunc("POST /api/cards/{id}/unfeature", requireAdmin(handleFeatureCard(false)))
 	mux.HandleFunc("GET /api/cards/{id}/comments", handleListComments)
 	mux.HandleFunc("POST /api/cards/{id}/comments", handleCreateComment)
 	mux.HandleFunc("GET /api/links", handleListLinks)
@@ -88,17 +93,22 @@ func main() {
 	mux.HandleFunc("POST /api/admin/events/{id}/approve", requireAdmin(handleModerateEvent("approved")))
 	mux.HandleFunc("POST /api/admin/events/{id}/reject", requireAdmin(handleModerateEvent("rejected")))
 
-	// Open data exports
+	// Data access — bulk exports require API key, ICS calendar feed is public
 	mux.HandleFunc("GET /api/export", handleExportIndex)
-	mux.HandleFunc("GET /api/export/cards.json", handleExportCardsJSON)
-	mux.HandleFunc("GET /api/export/cards.csv", handleExportCardsCSV)
-	mux.HandleFunc("GET /api/export/cards.geojson", handleExportCardsGeoJSON)
-	mux.HandleFunc("GET /api/export/events.json", handleExportEventsJSON)
+	mux.HandleFunc("GET /api/export/cards.json", requireAPIKey(handleExportCardsJSON))
+	mux.HandleFunc("GET /api/export/cards.csv", requireAPIKey(handleExportCardsCSV))
+	mux.HandleFunc("GET /api/export/cards.geojson", requireAPIKey(handleExportCardsGeoJSON))
+	mux.HandleFunc("GET /api/export/events.json", requireAPIKey(handleExportEventsJSON))
 	mux.HandleFunc("GET /api/export/events.ics", handleExportEventsICS)
 
 	// Team activity feed (virtual volunteers)
 	mux.HandleFunc("GET /api/activity", handleListActivity)
 	mux.HandleFunc("POST /api/activity", handleCreateActivity)
+
+	// API key management (admin only)
+	mux.HandleFunc("GET /api/api-keys", handleListAPIKeys)
+	mux.HandleFunc("POST /api/api-keys", handleCreateAPIKey)
+	mux.HandleFunc("DELETE /api/api-keys/{id}", handleRevokeAPIKey)
 
 	// Pages
 	mux.HandleFunc("GET /{$}", servePage("canvas.html"))
@@ -107,8 +117,15 @@ func main() {
 		http.Redirect(w, r, "/calendrier", http.StatusMovedPermanently)
 	})
 	mux.HandleFunc("GET /annuaire", handleAnnuairePage)
+	mux.HandleFunc("GET /carte/{slug}", handleCardDetailPage)
+	mux.HandleFunc("GET /sitemap.xml", handleSitemap)
+	mux.HandleFunc("GET /a-propos", servePage("a-propos.html"))
 	mux.HandleFunc("GET /team/activity", handleTeamActivityPage)
-	mux.HandleFunc("GET /donnees-ouvertes", servePage("open-data.html"))
+	mux.HandleFunc("GET /acces-donnees", servePage("data-access.html"))
+	mux.HandleFunc("GET /donnees-ouvertes", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/acces-donnees", http.StatusMovedPermanently)
+	})
+	mux.HandleFunc("GET /conditions-utilisation", servePage("terms.html"))
 	mux.HandleFunc("GET /legal", servePage("legal.html"))
 	mux.HandleFunc("GET /privacy", servePage("privacy.html"))
 	mux.HandleFunc("GET /cookies", servePage("cookies.html"))
@@ -147,9 +164,11 @@ func ensureIndexes(ctx context.Context) {
 	co := db.Collection("comments")
 	e := db.Collection("orgevents")
 	a := db.Collection("activities")
+	ak := db.Collection("api_keys")
 	_, _ = c.Indexes().CreateMany(ctx, cardIndexes())
 	_, _ = l.Indexes().CreateMany(ctx, linkIndexes())
 	_, _ = co.Indexes().CreateMany(ctx, commentIndexes())
 	_, _ = e.Indexes().CreateMany(ctx, eventIndexes())
 	_, _ = a.Indexes().CreateMany(ctx, activityIndexes())
+	_, _ = ak.Indexes().CreateMany(ctx, apiKeyIndexes())
 }

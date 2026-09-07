@@ -24,9 +24,12 @@ type Card struct {
 	Address     string             `bson:"address,omitempty" json:"address,omitempty"`
 	Lat         *float64           `bson:"lat,omitempty" json:"lat,omitempty"`
 	Lng         *float64           `bson:"lng,omitempty" json:"lng,omitempty"`
+	Images      []string           `bson:"images,omitempty" json:"images,omitempty"`
+	Slug        string             `bson:"slug,omitempty" json:"slug,omitempty"`
 	Votes       int                `bson:"votes" json:"votes"`
 	Voters      []string           `bson:"voters" json:"-"`
 	IsExample   bool               `bson:"isExample" json:"isExample"`
+	Featured    bool               `bson:"featured" json:"featured"`
 	CreatedAt   time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt   time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
@@ -94,6 +97,8 @@ func cardIndexes() []mongo.IndexModel {
 		{Keys: bson.D{{Key: "tags", Value: 1}}},
 		{Keys: bson.D{{Key: "votes", Value: -1}}},
 		{Keys: bson.D{{Key: "isExample", Value: 1}}},
+		{Keys: bson.D{{Key: "slug", Value: 1}},
+			Options: options.Index().SetUnique(true).SetSparse(true)},
 	}
 }
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calendrier Partage - Enbauges</title>
+  <title>Calendrier — La Commune des Bauges</title>
   <meta name="description" content="Partagez et decouvrez les evenements du territoire">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,7 +29,7 @@
               <path d="M16 8C20 8 24 12 24 16C24 20 20 24 16 24" stroke="#D4A03C" stroke-width="2" stroke-linecap="round"/>
               <circle cx="16" cy="16" r="3" fill="#FAF7F2"/>
             </svg>
-            <span style="font-weight: 700; font-size: 1.125rem; color: var(--enbauges-earth);">Enbauges</span>
+            <span style="font-weight: 700; font-size: 1.125rem; color: var(--enbauges-earth);">La Commune des Bauges</span>
           </a>
           <div style="display: flex; gap: 0.75rem;">
             <a href="/" class="enbauges-btn-secondary" style="text-decoration: none;">
@@ -47,10 +47,10 @@
       <div class="enbauges-container" style="padding-top: 1.5rem; padding-bottom: 2rem;">
         <div style="text-align: center; margin-bottom: 1.5rem;">
           <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--enbauges-earth); margin-bottom: 0.25rem;">
-            Calendrier Partage
+            Calendrier du territoire
           </h1>
           <p style="color: var(--enbauges-brown); font-size: 0.9375rem;">
-            Decouvrez et partagez les evenements du territoire
+            Les evenements des 13 communes du Cœur des Bauges
           </p>
         </div>
 
@@ -774,6 +774,10 @@
           detailTab.value = 'details';
           entryComments.value = [];
           newComment.value = '';
+          // Update URL hash for deep-linking / sharing
+          if (entry._id) {
+            history.replaceState(null, '', '/calendrier#/event/' + entry._id);
+          }
           try {
             const res = await fetch(`/calendrier/api/${entry._id}`);
             if (res.ok) {
@@ -789,6 +793,8 @@
           selectedEntry.value = null;
           entryComments.value = [];
           newComment.value = '';
+          // Clear URL hash
+          history.replaceState(null, '', '/calendrier');
         };
 
         const submitComment = async () => {
@@ -1007,9 +1013,29 @@
           }
         };
 
-        onMounted(() => {
-          loadEntries();
+        onMounted(async () => {
+          await loadEntries();
           window.addEventListener('keydown', handleKeydown);
+          // Deep-link: check URL hash for /event/<id> and auto-open
+          const hash = window.location.hash;
+          if (hash && hash.startsWith('#/event/')) {
+            const eventId = hash.replace('#/event/', '');
+            const entry = entries.value.find(e => e._id === eventId);
+            if (entry) {
+              openEntryDetail(entry);
+            } else {
+              // Try fetching directly by ID
+              try {
+                const res = await fetch('/calendrier/api/' + eventId);
+                if (res.ok) {
+                  const data = await res.json();
+                  openEntryDetail(data);
+                }
+              } catch (e) {
+                console.error('Deep-link entry not found:', e);
+              }
+            }
+          }
         });
 
         return {

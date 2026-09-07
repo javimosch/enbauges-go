@@ -2,11 +2,16 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+
+	"golang.org/x/text/unicode/norm"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -57,6 +62,10 @@ func handleListCards(w http.ResponseWriter, r *http.Request) {
 			bson.M{"description": bson.M{"$regex": regexEscape(search), "$options": "i"}},
 		}
 	}
+	// Hide example cards unless explicitly requested via ?examples=true
+	if q.Get("examples") != "true" {
+		filter["isExample"] = bson.M{"$ne": true}
+	}
 
 	limit, _ := strconv.ParseInt(q.Get("limit"), 10, 64)
 	if limit <= 0 || limit > 1000 {
@@ -81,6 +90,16 @@ func handleListCards(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err.Error())
 		return
 	}
+	// Sort featured cards first within the result set
+	slices.SortStableFunc(result, func(a, b Card) int {
+		if a.Featured && !b.Featured {
+			return -1
+		}
+		if !a.Featured && b.Featured {
+			return 1
+		}
+		return 0
+	})
 	total, err := cards().CountDocuments(ctx, filter)
 	if err != nil {
 		writeErr(w, 500, err.Error())
@@ -127,6 +146,76 @@ type cardInput struct {
 	VoterID     string   `json:"voterId"`
 }
 
+// slugify converts a title to a URL-friendly slug: lowercase, ASCII-fold
+// accents via Unicode NFKD decomposition, spaces→hyphens, strip non-alphanumeric,
+// max 80 chars.
+func slugify(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	s = strings.ReplaceAll(s, "æ", "ae")
+	s = strings.ReplaceAll(s, "œ", "oe")
+	// NFKD decomposes accented chars into base char + combining marks
+	s = norm.NFKD.String(s)
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == ' ' || r == '-' || r == '_':
+			b.WriteByte('-')
+		case unicode.IsMark(r):
+			// skip combining marks (accents)
+		case unicode.IsLetter(r) || unicode.IsDigit(r):
+			b.WriteRune(r)
+		}
+	}
+	slug := b.String()
+	slug = strings.Trim(slug, "-")
+	// collapse multiple hyphens
+	for strings.Contains(slug, "--") {
+		slug = strings.ReplaceAll(slug, "--", "-")
+	}
+	if len(slug) > 80 {
+		slug = slug[:80]
+		slug = strings.Trim(slug, "-")
+	}
+	return slug
+}
+
+// generateUniqueSlug returns a slug that doesn't collide with existing cards.
+// Appends -2, -3, etc. for duplicates.
+func generateUniqueSlug(ctx context.Context, base string, excludeID *primitive.ObjectID) (string, error) {
+	slug := slugify(base)
+	if slug == "" {
+		slug = "carte"
+	}
+	filter := bson.M{"slug": slug}
+	if excludeID != nil {
+		filter["_id"] = bson.M{"$ne": *excludeID}
+	}
+	count, err := cards().CountDocuments(ctx, filter)
+	if err != nil {
+		return "", err
+	}
+	if count == 0 {
+		return slug, nil
+	}
+	for i := 2; i <= 100; i++ {
+		candidate := fmt.Sprintf("%s-%d", slug, i)
+		f := bson.M{"slug": candidate}
+		if excludeID != nil {
+			f["_id"] = bson.M{"$ne": *excludeID}
+		}
+		count, err := cards().CountDocuments(ctx, f)
+		if err != nil {
+			return "", err
+		}
+		if count == 0 {
+			return candidate, nil
+		}
+	}
+	return slug, nil // fallback, unlikely
+}
+
 func handleCreateCard(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := reqCtx(r)
 	defer cancel()
@@ -151,6 +240,29 @@ func handleCreateCard(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "description must be 500 characters or less")
 		return
 	}
+
+	// Duplicate prevention: reject if a card with the same title (case-insensitive)
+	// already exists. If both have an address, they must match too (so same-named
+	// churches in different communes are distinct).
+	dupFilter := bson.M{
+		"title": bson.M{"$regex": "^" + regexp.QuoteMeta(in.Title) + "$", "$options": "i"},
+	}
+	if in.Address != nil && strings.TrimSpace(*in.Address) != "" {
+		dupFilter["address"] = strings.TrimSpace(*in.Address)
+	}
+	existingCount, err := cards().CountDocuments(ctx, dupFilter)
+	if err == nil && existingCount > 0 {
+		writeErr(w, 409, "a card with this title already exists")
+		return
+	}
+
+	// Generate unique slug
+	slug, err := generateUniqueSlug(ctx, in.Title, nil)
+	if err != nil {
+		writeErr(w, 500, "failed to generate slug: "+err.Error())
+		return
+	}
+
 	now := time.Now().UTC()
 	card := Card{
 		ID:          primitive.NewObjectID(),
@@ -158,6 +270,7 @@ func handleCreateCard(w http.ResponseWriter, r *http.Request) {
 		Title:       strings.TrimSpace(in.Title),
 		Description: strings.TrimSpace(in.Description),
 		Tags:        in.Tags,
+		Slug:        slug,
 		Voters:      []string{},
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -197,12 +310,20 @@ func handleUpdateCard(w http.ResponseWriter, r *http.Request) {
 	}
 	set := bson.M{"updatedAt": time.Now().UTC()}
 	unset := bson.M{}
+	if in.Type != "" {
+		set["type"] = strings.TrimSpace(in.Type)
+	}
 	if in.Title != "" {
 		if len([]rune(in.Title)) > 200 {
 			writeErr(w, 400, "title must be 200 characters or less")
 			return
 		}
 		set["title"] = strings.TrimSpace(in.Title)
+		// Regenerate slug if title changed
+		newSlug, err := generateUniqueSlug(ctx, in.Title, &id)
+		if err == nil {
+			set["slug"] = newSlug
+		}
 	}
 	if in.Description != "" {
 		if len([]rune(in.Description)) > 500 {
@@ -383,4 +504,28 @@ func regexEscape(s string) string {
 		b.WriteRune(c)
 	}
 	return b.String()
+}
+
+func handleFeatureCard(featured bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := reqCtx(r)
+		defer cancel()
+		id, ok := objID(w, r)
+		if !ok {
+			return
+		}
+		var card Card
+		err := cards().FindOneAndUpdate(ctx, bson.M{"_id": id},
+			bson.M{"$set": bson.M{"featured": featured, "updatedAt": time.Now().UTC()}},
+			options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&card)
+		if err == mongo.ErrNoDocuments {
+			writeErr(w, 404, "Card not found")
+			return
+		}
+		if err != nil {
+			writeErr(w, 500, err.Error())
+			return
+		}
+		writeJSON(w, 200, card)
+	}
 }

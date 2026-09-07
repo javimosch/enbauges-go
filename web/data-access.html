@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accès aux données — La Commune des Bauges</title>
+  <meta name="description" content="Accès aux données du territoire du Cœur des Bauges. Exports sur demande avec clé API. Sources publiques, redistribution contrôlée.">
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="/css/enbauges.css" rel="stylesheet">
+</head>
+<body>
+  <nav class="enbauges-navbar">
+    <div class="enbauges-container">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 0;">
+        <a href="/" class="enbauges-brand" style="text-decoration: none;">
+          <svg class="enbauges-brand__logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="16" cy="16" r="14" fill="#7A9E7E"/>
+            <path d="M16 8C12 8 8 12 8 16C8 20 12 24 16 24C20 24 24 20 24 16" stroke="#FAF7F2" stroke-width="2" stroke-linecap="round"/>
+            <path d="M16 8C20 8 24 12 24 16C24 20 20 24 16 24" stroke="#D4A03C" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="3" fill="#FAF7F2"/>
+          </svg>
+          <span style="font-weight: 700; font-size: 1.125rem; color: var(--enbauges-earth);">La Commune des Bauges</span>
+        </a>
+        <a href="/" class="enbauges-btn-secondary" style="text-decoration: none;">← Retour</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="enbauges-container" style="padding: 2rem 1rem; max-width: 48rem; margin: 0 auto;">
+    <h1 style="font-size: 1.875rem; font-weight: 700; margin-bottom: 1rem; color: var(--enbauges-earth);">Accès aux données</h1>
+
+    <p style="color: var(--enbauges-brown); line-height: 1.6; margin-bottom: 2rem;">
+      La Commune des Bauges collecte des informations depuis des sources publiques
+      (sites web des communes, Radio Alto, OpenStreetMap) pour constituer une carte
+      vivante du territoire. Les données sont consultables librement sur le site.
+      L'accès aux exports en masse (JSON, CSV, GeoJSON) est contrôlé et nécessite une clé API.
+    </p>
+
+    <!-- What's freely accessible -->
+    <div style="margin-bottom: 2rem; padding: 1.25rem; background: var(--enbauges-cream); border-radius: 8px;">
+      <h2 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--enbauges-sage);">Accessible librement</h2>
+      <ul style="color: var(--enbauges-brown); line-height: 1.8; padding-left: 1.25rem;">
+        <li>Le <a href="/canvas" style="color: var(--enbauges-sage); font-weight: 500;">canvas</a> — cartes du territoire (acteurs, solutions, initiatives)</li>
+        <li>L'<a href="/calendrier" style="color: var(--enbauges-sage); font-weight: 500;">agenda</a> — événements publics du Cœur des Bauges</li>
+        <li>L'<a href="/annuaire" style="color: var(--enbauges-sage); font-weight: 500;">annuaire</a> — liste imprimable des acteurs</li>
+        <li>L'agenda en <a href="/api/export/events.ics" style="color: var(--enbauges-sage); font-weight: 500;">iCal</a> — abonnement calendrier (Thunderbird, Google Agenda, iPhone)</li>
+      </ul>
+    </div>
+
+    <!-- What requires API key -->
+    <div style="margin-bottom: 2rem; padding: 1.25rem; background: #fff8e7; border-radius: 8px; border-left: 3px solid #D4A03C;">
+      <h2 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--enbauges-earth);">Exports en masse — clé API requise</h2>
+      <p style="color: var(--enbauges-brown); line-height: 1.6; margin-bottom: 1rem;">
+        Pour accéder aux exports machine-readable (JSON, CSV, GeoJSON), une clé API est nécessaire.
+        Cela nous permet de contrôler la redistribution et d'assurer le respect des sources.
+      </p>
+      <ul style="color: var(--enbauges-brown); line-height: 1.8; padding-left: 1.25rem; margin-bottom: 1rem;">
+        <li><code style="background: var(--enbauges-cream); padding: 0.1rem 0.3rem; border-radius: 3px;">/api/export/cards.json?key=...</code> — cartes + liens</li>
+        <li><code style="background: var(--enbauges-cream); padding: 0.1rem 0.3rem; border-radius: 3px;">/api/export/cards.csv?key=...</code> — cartes en tableur</li>
+        <li><code style="background: var(--enbauges-cream); padding: 0.1rem 0.3rem; border-radius: 3px;">/api/export/cards.geojson?key=...</code> — cartes géolocalisées</li>
+        <li><code style="background: var(--enbauges-cream); padding: 0.1rem 0.3rem; border-radius: 3px;">/api/export/events.json?key=...</code> — événements</li>
+      </ul>
+      <p style="color: var(--enbauges-brown); font-size: 0.9rem;">
+        Pour demander une clé : <a href="mailto:contact@savoietech.fr" style="color: var(--enbauges-sage); font-weight: 500;">contact@savoietech.fr</a>
+      </p>
+    </div>
+
+    <!-- Data provenance -->
+    <div style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--enbauges-sage);">Provenance des données</h2>
+      <p style="color: var(--enbauges-brown); line-height: 1.6; margin-bottom: 1rem;">
+        Les données présentées sur La Commune des Bauges proviennent de sources publiques :
+      </p>
+      <table style="width: 100%; border-collapse: collapse; color: var(--enbauges-brown); font-size: 0.9rem;">
+        <tr style="border-bottom: 1px solid var(--enbauges-cream);">
+          <td style="padding: 0.5rem 0; font-weight: 500;">Sites web des communes</td>
+          <td style="padding: 0.5rem 0;">Événements, informations pratiques</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--enbauges-cream);">
+          <td style="padding: 0.5rem 0; font-weight: 500;">Radio Alto (105.5 FM)</td>
+          <td style="padding: 0.5rem 0;">Annonces d'événements (transcriptions)</td>
+        </tr>
+        <tr style="border-bottom: 1px solid var(--enbauges-cream);">
+          <td style="padding: 0.5rem 0; font-weight: 500;">OpenStreetMap</td>
+          <td style="padding: 0.5rem 0;">Géolocalisation, lieux référencés</td>
+        </tr>
+        <tr>
+          <td style="padding: 0.5rem 0; font-weight: 500;">Contributions directes</td>
+          <td style="padding: 0.5rem 0;">Cartes ajoutées par les acteurs du territoire</td>
+        </tr>
+      </table>
+      <p style="color: var(--enbauges-stone); font-size: 0.85rem; margin-top: 1rem; line-height: 1.5;">
+        La Commune des Bauges ne prétend pas être propriétaire de ces données.
+        Elle les agrège et les présente pour faciliter la découverte du territoire.
+        Les droits de réutilisation relèvent des sources d'origine.
+      </p>
+    </div>
+
+    <!-- Conditions -->
+    <div style="margin-bottom: 2rem; padding: 1.25rem; background: var(--enbauges-cream); border-radius: 8px;">
+      <h2 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem; color: var(--enbauges-sage);">Conditions d'utilisation</h2>
+      <ul style="color: var(--enbauges-brown); line-height: 1.8; padding-left: 1.25rem;">
+        <li>La consultation du site est libre et gratuite</li>
+        <li>Les exports en masse sont destinés à un usage personnel ou de recherche</li>
+        <li>La <strong>redistribution</strong> des données extraites (publication, API tierce, service commercial) est <strong>interdite sans autorisation</strong></li>
+        <li>Toute utilisation doit mentionner la source (« La Commune des Bauges — enbauges.fr ») et les sources d'origine</li>
+        <li>Les données sont fournies « telles quelles », sans garantie d'exhaustivité ou d'exactitude</li>
+      </ul>
+      <p style="margin-top: 1rem;">
+        <a href="/conditions-utilisation" style="color: var(--enbauges-sage); font-weight: 500;">Consulter les conditions complètes →</a>
+      </p>
+    </div>
+
+    <div style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--enbauges-cream);">
+      <a href="/" style="color: var(--enbauges-sage); font-weight: 500;">← Retour au canvas</a>
+    </div>
+  </div>
+
+  <footer class="enbauges-footer" style="text-align: center; padding: 2rem 1rem; color: var(--enbauges-stone-light); font-size: 0.85rem;">
+    <p>La Commune des Bauges — Cœur des Bauges, Massif des Bauges, Savoie</p>
+  </footer>
+</body>
+</html>

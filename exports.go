@@ -12,9 +12,31 @@ import (
 )
 
 const (
-	exportLicense = "Licence Ouverte 2.0 (Etalab) - https://www.etalab.gouv.fr/licence-ouverte-open-licence"
 	exportSource  = "enbauges.fr"
+	exportNotice  = "Données collectées depuis des sources publiques (sites de communes, Radio Alto). Accès contrôlé — la redistribution en masse est soumise à autorisation."
 )
+
+// requireAPIKey checks for a valid API key for bulk data exports.
+// The ICS calendar feed remains public (it's a calendar subscription, not bulk data).
+func requireAPIKey(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		key := r.URL.Query().Get("key")
+		if key == "" {
+			key = r.Header.Get("X-API-Key")
+		}
+		if key == "" || !validateAPIKey(r, key) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(401)
+			json.NewEncoder(w).Encode(map[string]any{
+				"error":  "api_key_required",
+				"detail": "L'accès aux exports en masse nécessite une clé API valide. Contactez contact@savoietech.fr pour en demander une.",
+				"page":   baseURL(r) + "/acces-donnees",
+			})
+			return
+		}
+		next(w, r)
+	}
+}
 
 func csvEscape(v string) string {
 	if strings.ContainsAny(v, "\",\n\r;") {
@@ -44,14 +66,14 @@ func handleExportIndex(w http.ResponseWriter, r *http.Request) {
 	base := baseURL(r) + "/api/export"
 	writeJSON(w, 200, map[string]any{
 		"source":      exportSource,
-		"license":     exportLicense,
-		"description": "Données ouvertes du territoire du Cœur des Bauges. Réutilisation libre avec mention de la source.",
+		"notice":      exportNotice,
+		"description": "Accès aux données du territoire du Cœur des Bauges. Accès contrôlé — clé API requise pour les exports en masse (sauf agenda iCal).",
 		"exports": []map[string]string{
-			{"url": base + "/cards.json", "format": "JSON", "content": "Cartes (acteurs, solutions, initiatives) et liens entre elles"},
-			{"url": base + "/cards.csv", "format": "CSV", "content": "Cartes, à plat pour tableur"},
-			{"url": base + "/cards.geojson", "format": "GeoJSON", "content": "Cartes géolocalisées, pour outils cartographiques"},
-			{"url": base + "/events.json", "format": "JSON", "content": "Événements publics à venir"},
-			{"url": base + "/events.ics", "format": "iCalendar", "content": "Agenda public, abonnable depuis tout calendrier"},
+			{"url": base + "/cards.json?key=YOUR_KEY", "format": "JSON", "content": "Cartes (acteurs, solutions, initiatives) et liens — clé requise"},
+			{"url": base + "/cards.csv?key=YOUR_KEY", "format": "CSV", "content": "Cartes, à plat pour tableur — clé requise"},
+			{"url": base + "/cards.geojson?key=YOUR_KEY", "format": "GeoJSON", "content": "Cartes géolocalisées — clé requise"},
+			{"url": base + "/events.json?key=YOUR_KEY", "format": "JSON", "content": "Événements publics — clé requise"},
+			{"url": base + "/events.ics", "format": "iCalendar", "content": "Agenda public, abonnable — libre d'accès"},
 		},
 	})
 }
@@ -87,7 +109,7 @@ func handleExportCardsJSON(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, 200, map[string]any{
 		"source":     exportSource,
-		"license":    exportLicense,
+		"notice":     exportNotice,
 		"exportedAt": time.Now().UTC().Format(time.RFC3339),
 		"cards":      cardList,
 		"links":      outLinks,
@@ -169,7 +191,7 @@ func handleExportCardsGeoJSON(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/geo+json; charset=utf-8")
 	json.NewEncoder(w).Encode(map[string]any{
-		"type": "FeatureCollection", "license": exportLicense, "source": exportSource,
+		"type": "FeatureCollection", "notice": exportNotice, "source": exportSource,
 		"features": features,
 	})
 }
@@ -189,7 +211,7 @@ func handleExportEventsJSON(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	writeJSON(w, 200, map[string]any{
-		"source": exportSource, "license": exportLicense,
+		"source": exportSource, "notice": exportNotice,
 		"exportedAt": time.Now().UTC().Format(time.RFC3339), "events": out,
 	})
 }

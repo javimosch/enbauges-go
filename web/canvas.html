@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>La Commune des Bauges — Cœur des Bauges, Savoie</title>
-  <meta name="description" content="La commune des Bauges : 13 communes, leurs acteurs, services et événements. La carte vivante du territoire du Cœur des Bauges en Savoie.">
+  <meta name="description" content="La commune des Bauges : 14 communes, leurs acteurs, services et événements. La carte vivante du territoire du Cœur des Bauges en Savoie.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,11 +14,9 @@
   <script src="https://cdn.jsdelivr.net/npm/vue-router@4.5.0/dist/vue-router.global.prod.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
   <style>
     [v-cloak] { display: none; }
     @media (max-width: 767px) { .graph-mode-btn { display: none !important; } }
-    #cy { width: 100%; height: 100%; }
   </style>
 <script defer src="https://vigie.intrane.fr/vigie.js"></script>
 </head>
@@ -48,13 +46,9 @@
           </button>
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem; pointer-events: auto;">
-          <input v-if="graphMode === '3d'" v-model="graphSearch" @input="graphSearchFly" type="search" placeholder="Rechercher un astre…"
+          <input v-model="graphSearch" @input="graphSearchFly" type="search" placeholder="Rechercher un astre…"
             style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #FAF7F2; padding: 0.4rem 0.75rem; border-radius: 0.5rem; font-size: 0.8125rem; width: 170px;">
           <span v-if="graphLoading" style="color: rgba(250,247,242,0.6); font-size: 0.875rem;">Constellation en préparation…</span>
-          <div v-if="graphSupports3D" style="display: flex; border: 1px solid rgba(255,255,255,0.2); border-radius: 0.5rem; overflow: hidden;">
-            <button @click="setGraphMode('3d')" :style="{ background: graphMode === '3d' ? 'rgba(255,255,255,0.18)' : 'transparent', border: 'none', color: '#FAF7F2', padding: '0.4rem 0.75rem', cursor: 'pointer', fontSize: '0.8125rem' }">3D</button>
-            <button @click="setGraphMode('2d')" :style="{ background: graphMode === '2d' ? 'rgba(255,255,255,0.18)' : 'transparent', border: 'none', color: '#FAF7F2', padding: '0.4rem 0.75rem', cursor: 'pointer', fontSize: '0.8125rem' }">2D</button>
-          </div>
           <button @click="closeGraphMode" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #FAF7F2; padding: 0.4rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500;">✕ Fermer</button>
         </div>
       </div>
@@ -62,8 +56,7 @@
       <div style="position: absolute; bottom: 1rem; left: 1rem; z-index: 10; font-size: 0.75rem; pointer-events: none;"
         :style="{ color: graphLinking ? '#D4A03C' : 'rgba(250,247,242,0.35)' }">
         <span v-if="graphLinking">🔗 Mode liaison : cliquez l'astre à relier à « {{ graphLinking.name }} » — Échap pour annuler</span>
-        <span v-else-if="graphMode === '3d'">Glissez pour orbiter · molette pour zoomer · cliquez un astre pour l'explorer</span>
-        <span v-else>La taille des nœuds reflète le nombre de connexions</span>
+        <span v-else>Glissez pour orbiter · molette pour zoomer · cliquez un astre pour l'explorer</span>
       </div>
 
       <!-- Side panel: selected node -->
@@ -106,8 +99,7 @@
         </div>
       </div>
 
-      <div id="graph3d" v-show="graphMode === '3d'" style="flex: 1;"></div>
-      <div id="cy" v-show="graphMode === '2d'" style="flex: 1;"></div>
+      <div id="graph3d" style="flex: 1;"></div>
     </div>
 
     <nav class="enbauges-navbar">
@@ -122,7 +114,8 @@
             </svg>
             <span style="font-weight: 700; font-size: 1.125rem; color: var(--enbauges-earth);">La Commune des Bauges</span>
           </a>
-          <div style="display: flex; gap: 0.75rem;">
+          <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <a href="/a-propos" style="color: var(--enbauges-sage); font-weight: 600; font-size: 0.875rem; text-decoration: none;">À propos</a>
             <button class="enbauges-btn-secondary graph-mode-btn" @click="openGraphMode" style="display: inline-flex; align-items: center; gap: 0.375rem;">
               <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="3" cy="3" r="2" stroke="currentColor" stroke-width="1.5"/>
@@ -148,7 +141,7 @@
         <div class="eb-hero__inner">
           <h1 class="eb-hero__title">La Commune des Bauges</h1>
           <p class="eb-hero__sub">
-            Le territoire du Cœur des Bauges — 13 communes, ses acteurs, ses services, ses événements.
+            Le territoire du Cœur des Bauges — 14 communes, ses acteurs, ses services, ses événements.
             Reliés par ceux qui y vivent. Sans compte, en moins d'une minute.
           </p>
           <div class="eb-hero__ctas">
@@ -484,6 +477,78 @@
           </div>
         </div>
 
+        <div v-if="!showMyFavorites && featuredCards.length > 0" style="margin-bottom: 1.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="var(--enbauges-green, #7A9E7E)">
+              <path d="M9 1L3 4v5c0 3.5 2.5 6.5 6 7.5 3.5-1 6-4 6-7.5V4l-6-3z" stroke="var(--enbauges-green, #7A9E7E)" stroke-width="1.5" fill="rgba(122,158,126,0.15)"/>
+            </svg>
+            <span style="font-weight: 600; color: var(--enbauges-green, #7A9E7E); font-size: 0.9375rem;">Lieux phares</span>
+            <span style="color: var(--enbauges-brown); font-size: 0.8125rem;">({{ featuredCards.length }})</span>
+          </div>
+          <div :class="viewMode === 'grid' ? 'enbauges-grid' : 'enbauges-list'">
+            <div
+              v-for="card in featuredCards"
+              :key="card._id"
+              class="enbauges-card"
+              :class="[
+                'enbauges-card--' + card.type,
+                { 'enbauges-card--hover': true }
+              ]"
+              style="border-left: 3px solid var(--enbauges-green, #7A9E7E);"
+              @click="selectCard(card)"
+            >
+              <div style="padding: 1.25rem;">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button @click.stop="toggleFavorite(card)" :style="{ color: isFavorited(card._id) ? '#DC2626' : 'var(--enbauges-brown-light)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }">
+                      <svg width="14" height="14" viewBox="0 0 14 14" :fill="isFavorited(card._id) ? '#DC2626' : 'none'" stroke="currentColor" stroke-width="1.5">
+                        <path d="M7 1L8.5 5H13L9.5 7.5L11 12L7 9.5L3 12L4.5 7.5L1 5H5.5L7 1Z"/>
+                      </svg>
+                    </button>
+                    <span style="background: var(--enbauges-green, #7A9E7E); color: white; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.625rem; font-weight: 600;">PHARE</span>
+                    <span :class="'enbauges-badge-' + card.type">
+                      {{ card.type === 'actor' ? 'Acteur' : card.type === 'solution' ? 'Solution' : 'Initiative' }}
+                    </span>
+                  </div>
+                  <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button
+                      class="enbauges-vote-btn"
+                      :class="{ 'enbauges-vote-btn--voted': hasVoted(card) }"
+                      @click.stop="toggleVote(card)"
+                      style="min-height: 36px; padding: 0.375rem 0.625rem;"
+                    >
+                      👍
+                      <span style="font-size: 0.8125rem;">{{ card.votes || 0 }}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <h3 style="font-weight: 600; color: var(--enbauges-earth); margin-bottom: 0.5rem; font-size: 1.0625rem;">
+                  {{ card.title }}
+                </h3>
+
+                <p style="font-size: 0.875rem; color: var(--enbauges-brown); margin-bottom: 0.75rem; line-height: 1.5;">
+                  {{ truncate(card.description, 100) }}
+                </p>
+
+                <div v-if="card.tags && card.tags.length > 0" style="display: flex; gap: 0.375rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                  <span v-for="tag in card.tags.slice(0, 3)" :key="tag" class="enbauges-tag">
+                    {{ tag }}
+                  </span>
+                  <span v-if="card.tags.length > 3" style="font-size: 0.75rem; color: var(--enbauges-brown);">
+                    +{{ card.tags.length - 3 }}
+                  </span>
+                </div>
+
+                <div v-if="card.address" style="font-size: 0.75rem; color: var(--enbauges-brown-light); display: flex; align-items: center; gap: 0.25rem;">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 1C3.8 1 2 2.8 2 5c0 3 4 6 4 6s4-3 4-6c0-2.2-1.8-4-4-4zm0 5.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"/></svg>
+                  {{ card.address }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div v-if="!showMyFavorites && (favoritedCards.length > 0 || favoriteCards.length > 0)" style="margin-bottom: 1.5rem;">
           <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
             <svg width="18" height="18" viewBox="0 0 18 18" fill="var(--enbauges-amber)">
@@ -652,6 +717,16 @@
       </div>
     </main>
 
+    <!-- Image lightbox -->
+    <div v-if="lightboxImage" class="enbauges-modal-backdrop" @click.self="lightboxImage = null" style="z-index: 1100;">
+      <div style="max-width: 90vw; max-height: 90vh;">
+        <img :src="lightboxImage" style="max-width: 90vw; max-height: 85vh; border-radius: 0.5rem; object-fit: contain;">
+        <div style="text-align: center; margin-top: 0.5rem;">
+          <button @click="lightboxImage = null" class="enbauges-btn-secondary" style="display: inline-flex;">Fermer</button>
+        </div>
+      </div>
+    </div>
+
     <div v-if="showAddModal" class="enbauges-modal-backdrop" @click.self="closeAddModal">
       <div class="enbauges-modal">
         <div class="enbauges-modal__header">
@@ -812,6 +887,26 @@
           <h2 class="enbauges-modal__title" style="margin-top: 0.75rem;">{{ selectedCard.title }}</h2>
         </div>
         <div class="enbauges-modal__body">
+          <!-- Image gallery -->
+          <div v-if="selectedCard.images && selectedCard.images.length > 0" style="margin-bottom: 1.25rem;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <div v-for="(img, i) in selectedCard.images" :key="i" style="position: relative;">
+                <img :src="img" :alt="selectedCard.title" style="width: 120px; height: 120px; object-fit: cover; border-radius: 0.5rem; border: 1px solid var(--enbauges-stone-light); cursor: pointer;" @click="openImageLightbox(img)">
+                <button v-if="myCards.includes(selectedCard._id)" @click.stop="removeImage(img)" style="position: absolute; top: 0.25rem; right: 0.25rem; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 0.75rem; display: flex; align-items: center; justify-content: center;">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upload button (only for card owners) -->
+          <div v-if="myCards.includes(selectedCard._id) && (!selectedCard.images || selectedCard.images.length < 5)" style="margin-bottom: 1.25rem;">
+            <label style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.75rem; background: var(--enbauges-cream); border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; color: var(--enbauges-sage); font-weight: 500;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v8M4 7l4-4 4 4M2 13h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Ajouter une image
+              <input type="file" accept="image/*" @change="uploadImage" style="display: none;">
+            </label>
+            <span v-if="uploadingImage" style="font-size: 0.8125rem; color: var(--enbauges-brown); margin-left: 0.5rem;">Envoi…</span>
+          </div>
+
           <p style="color: var(--enbauges-earth); line-height: 1.6; margin-bottom: 1rem;">
             {{ selectedCard.description }}
           </p>
@@ -851,6 +946,12 @@
             
             <a v-if="selectedCard.url" :href="selectedCard.url" target="_blank" rel="noopener" class="enbauges-link">
               ↗ Voir le site
+            </a>
+          </div>
+
+          <div v-if="selectedCard.slug" style="margin-bottom: 1rem;">
+            <a :href="'/carte/' + selectedCard.slug" target="_blank" class="enbauges-link" style="font-size: 0.875rem;">
+              📄 Page détaillée (partage & SEO)
             </a>
           </div>
           
@@ -1058,12 +1159,11 @@
         const claimingCard = ref(null);
         const showGraphMode = ref(false);
         const graphLoading = ref(false);
-        const graphMode = ref('3d');
-        const graphSupports3D = ref(true);
+        const lightboxImage = ref(null);
+        const uploadingImage = ref(false);
         const graphFilters = reactive({ actor: true, solution: true, initiative: true });
         const graphSelected = ref(null);
         const graphSelectedDegree = ref(0);
-        let cyInstance = null;
         let fg3dInstance = null;
         let graphRaw = { cards: [], links: [], degrees: {} };
         let orbitTimer = null;
@@ -1091,13 +1191,6 @@
           toast.type = type;
           toast.show = true;
           setTimeout(() => { toast.show = false; }, 3000);
-        }
-
-        function detectWebGL() {
-          try {
-            const c = document.createElement('canvas');
-            return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl')));
-          } catch (e) { return false; }
         }
 
         const loadedScripts = {};
@@ -1135,46 +1228,13 @@
           graphLoading.value = true;
           graphSelected.value = null;
           selectedNodeId = null;
-          const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-          graphSupports3D.value = detectWebGL() && !reducedMotion;
-          graphMode.value = graphSupports3D.value ? '3d' : '2d';
           await Vue.nextTick();
           try {
             await fetchGraphData();
-            if (graphMode.value === '3d') {
-              await initGraph3D();
-            } else {
-              await initGraph();
-            }
+            await initGraph3D();
           } catch (err) {
             console.error('Graph init error:', err);
-            if (graphMode.value === '3d') {
-              // WebGL/CDN failure: degrade to the 2D fallback
-              graphMode.value = '2d';
-              graphSupports3D.value = false;
-              await Vue.nextTick();
-              await initGraph().catch(() => showToast('Erreur lors du chargement du graphe', 'error'));
-            } else {
-              showToast('Erreur lors du chargement du graphe', 'error');
-            }
-          } finally {
-            graphLoading.value = false;
-          }
-        }
-
-        async function setGraphMode(mode) {
-          if (graphMode.value === mode) return;
-          graphMode.value = mode;
-          graphSelected.value = null;
-          selectedNodeId = null;
-          await Vue.nextTick();
-          graphLoading.value = true;
-          try {
-            if (mode === '3d') {
-              await initGraph3D();
-            } else if (!cyInstance) {
-              await initGraph();
-            }
+            showToast('Erreur lors du chargement de la constellation', 'error');
           } finally {
             graphLoading.value = false;
           }
@@ -1189,7 +1249,6 @@
           if (orphanPulseRaf) { cancelAnimationFrame(orphanPulseRaf); orphanPulseRaf = null; }
           graphSearch.value = '';
           cancelGraphLink();
-          if (cyInstance) { cyInstance.destroy(); cyInstance = null; }
           if (fg3dInstance) {
             try { fg3dInstance._destructor && fg3dInstance._destructor(); } catch (e) {}
             fg3dInstance = null;
@@ -1244,8 +1303,9 @@
                 name: c.title,
                 card: c,
                 type: c.type,
+                featured: !!c.featured,
                 degree: graphRaw.degrees[c._id] || 0,
-                val: 1 + (graphRaw.degrees[c._id] || 0) * 2
+                val: 1 + (graphRaw.degrees[c._id] || 0) * 2 + (c.featured ? 6 : 0)
               };
             });
           const links = graphRaw.links
@@ -1269,15 +1329,14 @@
             return;
           }
           if (fg3dInstance) fg3dInstance.graphData(filteredGraphData());
-          if (cyInstance && graphMode.value === '2d') { cyInstance.destroy(); cyInstance = null; initGraph(); }
         }
 
         function nodePaint(node) {
-          if (!selectedNodeId) return TYPE_COLOR[node.type] || '#8B7355';
+          if (!selectedNodeId) return node.featured ? '#D4A03C' : (TYPE_COLOR[node.type] || '#8B7355');
           if (node.id === selectedNodeId) return TYPE_COLOR_BRIGHT[node.type] || '#FAF7F2';
           return graphNeighbors(selectedNodeId).has(node.id)
-            ? TYPE_COLOR[node.type] || '#8B7355'
-            : 'rgba(120,120,140,0.18)';
+            ? (node.featured ? '#D4A03C' : TYPE_COLOR[node.type] || '#8B7355')
+            : (node.featured ? 'rgba(212,160,60,0.4)' : 'rgba(120,120,140,0.18)');
         }
 
         function handleGraphNodeClick(node) {
@@ -1389,6 +1448,10 @@
             sprite.color = '#FFFFFF';
             sprite.textHeight = 4.2;
             sprite.fontWeight = 'bold';
+          } else if (node.featured) {
+            sprite.color = '#D4A03C';
+            sprite.textHeight = 4;
+            sprite.fontWeight = 'bold';
           } else if (rel) {
             sprite.color = '#F5CD7E';
             sprite.textHeight = 3.4;
@@ -1480,113 +1543,6 @@
           orphanPulseRaf = requestAnimationFrame(pulse);
         }
 
-        async function initGraph() {
-          try {
-            const [cardsRes, linksRes] = await Promise.all([
-              fetch('/api/cards?limit=1000'),
-              fetch('/api/links')
-            ]);
-            const { cards: allCards } = await cardsRes.json();
-            const { links: allLinks } = await linksRes.json();
-
-            const degrees = {};
-            allLinks.forEach(l => {
-              const src = l.sourceCardId?._id || l.sourceCardId;
-              const tgt = l.targetCardId?._id || l.targetCardId;
-              degrees[src] = (degrees[src] || 0) + 1;
-              degrees[tgt] = (degrees[tgt] || 0) + 1;
-            });
-
-            const typeColor = { actor: '#C2703A', solution: '#7A9E7E', initiative: '#D4A03C' };
-
-            const elements = [
-              ...allCards.map(c => ({
-                data: {
-                  id: c._id,
-                  label: c.title,
-                  color: typeColor[c.type] || '#8B7355',
-                  size: Math.max(28, Math.min(90, 28 + (degrees[c._id] || 0) * 12)),
-                  card: c
-                }
-              })),
-              ...allLinks.map(l => ({
-                data: {
-                  id: l._id,
-                  source: l.sourceCardId?._id || l.sourceCardId,
-                  target: l.targetCardId?._id || l.targetCardId,
-                  relType: l.relationshipType
-                }
-              }))
-            ];
-
-            cyInstance = cytoscape({
-              container: document.getElementById('cy'),
-              elements,
-              style: [
-                {
-                  selector: 'node',
-                  style: {
-                    'background-color': 'data(color)',
-                    'width': 'data(size)',
-                    'height': 'data(size)',
-                    'label': 'data(label)',
-                    'color': '#FAF7F2',
-                    'font-size': 11,
-                    'text-valign': 'bottom',
-                    'text-margin-y': 5,
-                    'text-wrap': 'ellipsis',
-                    'text-max-width': 90,
-                    'border-width': 2,
-                    'border-color': 'rgba(255,255,255,0.18)'
-                  }
-                },
-                {
-                  selector: 'node:hover',
-                  style: {
-                    'border-color': '#FAF7F2',
-                    'border-width': 3,
-                    'cursor': 'pointer'
-                  }
-                },
-                {
-                  selector: 'edge',
-                  style: {
-                    'line-color': 'rgba(250,247,242,0.18)',
-                    'width': 1.5,
-                    'curve-style': 'bezier',
-                    'target-arrow-shape': 'triangle',
-                    'target-arrow-color': 'rgba(250,247,242,0.18)',
-                    'arrow-scale': 0.8
-                  }
-                }
-              ],
-              layout: {
-                name: 'cose',
-                animate: true,
-                animationDuration: 900,
-                nodeRepulsion: 9000,
-                idealEdgeLength: 130,
-                gravity: 0.25,
-                randomize: true,
-                fit: true,
-                padding: 60
-              },
-              minZoom: 0.1,
-              maxZoom: 4
-            });
-
-            cyInstance.on('tap', 'node', e => {
-              const card = e.target.data('card');
-              if (card) selectCard(card);
-            });
-          } catch (err) {
-            console.error('Graph init error:', err);
-            showToast('Erreur lors du chargement du graphe', 'error');
-          } finally {
-            graphLoading.value = false;
-          }
-        }
-
         const form = reactive({
           type: 'actor',
           title: '',
@@ -1639,6 +1595,11 @@
           if (!filteredCards.value) return [];
           return filteredCards.value.filter(c => favoriteCards.value.includes(c._id));
         });
+
+        const featuredCards = computed(() => {
+          if (!filteredCards.value) return [];
+          return filteredCards.value.filter(c => c.featured && !favoriteCards.value.includes(c._id));
+        });
         
         const linkTargets = computed(() => {
           if (!cards.value) return [];
@@ -1647,7 +1608,7 @@
 
         const otherCards = computed(() => {
           if (!cards.value) return [];
-          let result = cards.value.filter(c => !favoriteCards.value.includes(c._id));
+          let result = cards.value.filter(c => !favoriteCards.value.includes(c._id) && !c.featured);
           if (selectedCard.value) {
             result = result.filter(c => c._id !== selectedCard.value._id);
           }
@@ -1658,6 +1619,7 @@
           loading.value = true;
           try {
             const params = new URLSearchParams();
+            params.set('limit', '1000');
             if (filterType.value !== 'all') params.set('type', filterType.value);
             if (sortBy.value === 'votes') params.set('sort', 'votes');
             if (searchQuery.value.trim()) params.set('search', searchQuery.value.trim());
@@ -1903,7 +1865,55 @@
             deleting.value = false;
           }
         }
-        
+
+        async function uploadImage(e) {
+          if (!selectedCard.value || !e.target.files[0]) return;
+          const file = e.target.files[0];
+          uploadingImage.value = true;
+          try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await fetch('/api/cards/' + selectedCard.value._id + '/images', {
+              method: 'POST',
+              body: formData
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.error || 'Upload échoué');
+            }
+            const data = await res.json();
+            selectedCard.value = data.card;
+            await loadCards();
+            showToast('Image ajoutée');
+          } catch (err) {
+            showToast(err.message, 'error');
+          } finally {
+            uploadingImage.value = false;
+            e.target.value = '';
+          }
+        }
+
+        async function removeImage(url) {
+          if (!selectedCard.value) return;
+          if (!confirm('Retirer cette image de la carte ?')) return;
+          try {
+            const res = await fetch('/api/cards/' + selectedCard.value._id + '/images?url=' + encodeURIComponent(url), {
+              method: 'DELETE'
+            });
+            if (!res.ok) throw new Error('Échec de la suppression');
+            const card = await res.json();
+            selectedCard.value = card;
+            await loadCards();
+            showToast('Image retirée');
+          } catch (err) {
+            showToast(err.message, 'error');
+          }
+        }
+
+        function openImageLightbox(url) {
+          lightboxImage.value = url;
+        }
+
         async function submitCard() {
           formError.value = '';
           
@@ -2126,6 +2136,11 @@
           submitting,
           formError,
           deleting,
+          lightboxImage,
+          uploadingImage,
+          uploadImage,
+          removeImage,
+          openImageLightbox,
           showMyCards,
           showMyFavorites,
           showOtherCards,
@@ -2143,6 +2158,7 @@
           hasFilters,
           filteredCards,
           favoritedCards,
+          featuredCards,
           otherCards,
           linkTargets,
           selectCard,
@@ -2174,12 +2190,9 @@
           closeMapPicker,
           showGraphMode,
           graphLoading,
-          graphMode,
-          graphSupports3D,
           graphFilters,
           graphSelected,
           graphSelectedDegree,
-          setGraphMode,
           toggleGraphFilter,
           deselectGraphNode,
           openCardFromGraph,
@@ -2203,17 +2216,19 @@
 
   <footer class="enbauges-footer">
   <div class="enbauges-footer__links">
-    <a href="/agenda" class="enbauges-footer__link">Agenda</a>
+    <a href="/calendrier" class="enbauges-footer__link">Agenda</a>
     <span class="enbauges-footer__divider">·</span>
     <a href="/annuaire" class="enbauges-footer__link">Annuaire</a>
     <span class="enbauges-footer__divider">·</span>
-    <a href="/donnees-ouvertes" class="enbauges-footer__link">Données ouvertes</a>
+    <a href="/acces-donnees" class="enbauges-footer__link">Accès aux données</a>
     <span class="enbauges-footer__divider">·</span>
     <a href="/legal" class="enbauges-footer__link">Mentions légales</a>
     <span class="enbauges-footer__divider">·</span>
     <a href="/privacy" class="enbauges-footer__link">Confidentialité</a>
     <span class="enbauges-footer__divider">·</span>
     <a href="/cookies" class="enbauges-footer__link">Cookies</a>
+    <span class="enbauges-footer__divider">·</span>
+    <a href="https://github.com/javimosch/enbauges-go" target="_blank" rel="noopener" class="enbauges-footer__link">Code source</a>
   </div>
 </footer>
 </body>
