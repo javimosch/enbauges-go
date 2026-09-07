@@ -37,6 +37,23 @@
     .mat-admin table{width:100%;font-size:.88rem}.mat-admin td{padding:.35rem .4rem;vertical-align:top;border-top:1px solid #eee}
     .mat-btn-sm{padding:.25rem .6rem;border-radius:6px;border:1px solid var(--enbauges-stone-light);background:#fff;font:inherit;font-size:.8rem;cursor:pointer}
     .hp{position:absolute;left:-9999px;top:-9999px}
+    .reg-tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin:1rem 0 1.25rem}
+    .reg-tab{padding:.4rem .9rem;border-radius:999px;border:1px solid var(--enbauges-stone-light);background:#fff;font:inherit;font-size:.9rem;cursor:pointer}
+    .reg-tab--on{background:var(--enbauges-sage-dark);color:#fff;border-color:var(--enbauges-sage-dark)}
+    .reg-cols{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}@media(max-width:820px){.reg-cols{grid-template-columns:1fr}}
+    .reg-box{background:#fff;border:1px solid var(--enbauges-stone-light);border-radius:14px;padding:1.1rem 1.25rem}
+    .reg-box h3{margin:0 0 .6rem;font-size:1rem;color:var(--enbauges-earth)}
+    .reg-kv{display:grid;grid-template-columns:auto 1fr;gap:.3rem .8rem;font-size:.9rem}.reg-kv dt{color:var(--enbauges-stone)}.reg-kv dd{margin:0}
+    .reg-yes{color:var(--enbauges-sage-dark)}.reg-no{color:#8A3A2B}
+    .tl{list-style:none;margin:0;padding:0 0 0 1.1rem;border-left:2px solid var(--enbauges-stone-light)}
+    .tl li{position:relative;padding:0 0 .9rem .9rem;font-size:.9rem}
+    .tl li::before{content:"";position:absolute;left:-1.45rem;top:.3rem;width:.8rem;height:.8rem;border-radius:50%;background:var(--enbauges-sage);border:2px solid #fff;box-shadow:0 0 0 1px var(--enbauges-stone-light)}
+    .tl li.gone::before{background:#8A3A2B}.tl li.lent::before{background:var(--enbauges-amber)}.tl li.correct::before{background:var(--enbauges-stone)}
+    .tl .when{color:var(--enbauges-stone);font-size:.8rem}
+    .tl a.blk{font-size:.75rem;color:var(--enbauges-stone);margin-left:.4rem}
+    .ledger{width:100%;border-collapse:collapse;font-size:.88rem;background:#fff;border:1px solid var(--enbauges-stone-light);border-radius:12px;overflow:hidden}
+    .ledger th,.ledger td{padding:.5rem .6rem;border-bottom:1px solid #eee;text-align:left;vertical-align:top}.ledger th{font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--enbauges-stone)}
+    .verify-ok{background:#E8F1EA;border-radius:10px;padding:.8rem 1rem;color:var(--enbauges-sage-dark)}.verify-bad{background:#F3E3DF;border-radius:10px;padding:.8rem 1rem;color:#8A3A2B}
   </style>
 <script defer src="https://vigie.intrane.fr/vigie.js"></script>
 </head>
@@ -51,6 +68,7 @@
           <span style="font-weight:700;font-size:1.125rem;color:var(--enbauges-earth)">La Commune des Bauges</span>
         </a>
         <div style="display:flex;gap:.75rem">
+          <button class="enbauges-btn-secondary" v-if="meta.register" @click="view = view === 'registre' ? 'list' : 'registre'; if (view==='registre') loadRegister()">{{ view === 'registre' ? '← Annonces' : '⛓ Registre' }}</button>
           <button class="enbauges-btn-primary" @click="view = view === 'propose' ? 'list' : 'propose'">{{ view === 'propose' ? '← Voir les annonces' : '➕ Proposer un matériau' }}</button>
         </div>
       </div>
@@ -88,7 +106,7 @@
               <div class="mat-card__meta">{{ label(it.category) }} · {{ it.commune }}<span v-if="it.quantity"> · {{ it.quantity }}</span></div>
               <div style="font-size:.9rem;white-space:pre-line">{{ it.description }}</div>
               <div class="mat-contact"><span v-if="it.nickname"><strong>{{ it.nickname }}</strong> · </span><strong>Contact :</strong> {{ it.contact }}</div>
-              <div class="mat-card__meta">Publié le {{ date(it.approved_at) }}<a v-if="it.register_id && meta.register" :href="meta.register + '#/entry/' + it.register_id" target="_blank" rel="noopener" style="margin-left:.4rem" title="Voir dans le registre public">⛓ registre</a></div>
+              <div class="mat-card__meta">Publié le {{ date(it.approved_at) }}<a v-if="meta.register" href="#" @click.prevent="openHistory(it.id)" style="margin-left:.4rem" title="Historique de cet objet dans le registre public">⛓ historique</a></div>
             </div>
           </article>
         </div>
@@ -124,6 +142,61 @@
         </form>
       </section>
 
+      <!-- ===== registre ===== -->
+      <section v-if="view === 'registre'">
+        <h2 class="enbauges-section-title" style="font-size:1.25rem">⛓ Le registre public de la matériauthèque</h2>
+        <p class="mat-note">Ce que la matériauthèque enregistre est inscrit dans un registre partagé — une chaîne de blocs signés, copiée sur deux machines, que ce site lui-même ne peut pas réécrire. Cette page lit le registre directement, sans passer par le serveur d'enbauges.</p>
+        <div class="reg-tabs">
+          <button class="reg-tab" :class="{'reg-tab--on': reg.tab==='objets'}" @click="reg.tab='objets'">Par objet</button>
+          <button class="reg-tab" :class="{'reg-tab--on': reg.tab==='journal'}" @click="reg.tab='journal'">Journal du territoire</button>
+          <button class="reg-tab" :class="{'reg-tab--on': reg.tab==='quoi'}" @click="reg.tab='quoi'">Ce qui est enregistré</button>
+          <button class="reg-tab" :class="{'reg-tab--on': reg.tab==='verif'}" @click="reg.tab='verif'">Vérifier</button>
+          <a class="reg-tab" :href="meta.register" target="_blank" rel="noopener" style="text-decoration:none">Explorateur brut ↗</a>
+        </div>
+        <div v-if="reg.loading" class="mat-note">Lecture du registre…</div>
+        <div v-else-if="reg.error" class="verify-bad">{{ reg.error }}</div>
+
+        <div v-else-if="reg.tab==='objets'">
+          <div class="mat-filters"><select v-model="reg.focus"><option value="">Tous les objets</option><option v-for="o in objects" :value="o.id">{{ o.title }}</option></select><span class="mat-note">{{ objects.length }} objet{{ objects.length>1?'s':'' }} passés par la matériauthèque</span></div>
+          <div class="reg-cols">
+            <div class="reg-box" v-for="o in objects.filter(o => !reg.focus || o.id===reg.focus)" :key="o.id" :id="'obj-'+o.id">
+              <h3>{{ o.title }} <span class="mat-note" style="font-weight:400">· {{ label(o.category) }} · {{ o.commune }}</span></h3>
+              <ul class="tl"><li v-for="ev in o.events" :key="ev.id" :class="ev.cls"><div>{{ ev.text }}<a class="blk" :href="meta.register + '#/block/' + ev.height" target="_blank" rel="noopener" title="bloc {{ev.height}}">bloc {{ ev.height }}</a></div><div class="when">{{ ev.when }}</div></li></ul>
+            </div>
+          </div>
+          <p v-if="objects.length===0" class="mat-note">Rien d'inscrit pour l'instant.</p>
+        </div>
+
+        <div v-else-if="reg.tab==='journal'">
+          <div class="mat-filters">
+            <select v-model="reg.commune"><option value="">Toutes communes</option><option v-for="c in meta.communes" :value="c">{{ c }}</option></select>
+            <select v-model="reg.month"><option value="">Tous les mois</option><option v-for="m in months" :value="m">{{ m }}</option></select>
+            <span class="mat-note" style="margin-left:auto">{{ journal.length }} inscription{{ journal.length>1?'s':'' }}</span>
+          </div>
+          <table class="ledger"><tr><th>Quand</th><th>Quoi</th><th>Objet</th><th>Commune</th><th>Qui</th><th>Bloc</th></tr>
+            <tr v-for="e in journal" :key="e.id"><td>{{ e.when }}</td><td>{{ e.text }}</td><td>{{ e.title }}</td><td>{{ e.commune }}</td><td>{{ e.by || '—' }}</td><td><a :href="meta.register + '#/block/' + e.height" target="_blank" rel="noopener">{{ e.height }}</a></td></tr>
+          </table>
+        </div>
+
+        <div v-else-if="reg.tab==='quoi'" class="reg-cols">
+          <div class="reg-box"><h3>Ce qui va dans le registre</h3>
+            <dl class="reg-kv"><dt class="reg-yes">✔</dt><dd>l'identifiant de l'objet, son titre, sa catégorie, sa commune, don ou prêt</dd><dt class="reg-yes">✔</dt><dd>le prénom ou surnom, <em>si</em> l'annonceur en a donné un</dd><dt class="reg-yes">✔</dt><dd>chaque changement : publié, prêté, à nouveau disponible, parti, retiré, corrigé</dd><dt class="reg-yes">✔</dt><dd>la date de chaque inscription et la clé du serveur qui l'a signée</dd></dl></div>
+          <div class="reg-box"><h3>Ce qui n'y va jamais</h3>
+            <dl class="reg-kv"><dt class="reg-no">✘</dt><dd>le téléphone, l'e-mail ou tout moyen de contact</dd><dt class="reg-no">✘</dt><dd>la description et la photo</dd><dt class="reg-no">✘</dt><dd>les propositions refusées ou en attente</dd><dt class="reg-no">✘</dt><dd>qui a consulté quoi — le registre ne trace pas les lecteurs</dd></dl></div>
+          <div class="reg-box"><h3>Où et comment</h3>
+            <p style="font-size:.9rem;margin:0">Le registre est une chaîne de blocs : chaque inscription est signée, chaque bloc contient l'empreinte du précédent. Une copie vit sur le serveur d'enbauges.fr (qui signe les inscriptions) et une autre sur une machine indépendante. Modifier une ligne après coup casserait la chaîne sur toutes les copies : c'est ce qui rend l'historique fiable sans avoir à faire confiance au site.</p></div>
+          <div class="reg-box"><h3>Se tromper, c'est possible ; effacer, non</h3>
+            <p style="font-size:.9rem;margin:0">Une erreur ne se corrige pas en réécrivant le passé mais en ajoutant une inscription « correction » qui pointe vers l'originale. Les deux restent visibles. Le logiciel du registre, <a class="enbauges-link" href="https://github.com/javimosch/greffe" target="_blank" rel="noopener">greffe</a>, est libre ; celui de cette page aussi.</p></div>
+        </div>
+
+        <div v-else-if="reg.tab==='verif'">
+          <p style="max-width:640px">Le bouton demande au registre de tout revérifier depuis le premier bloc : chaque empreinte, chaque signature, chaque règle d'écriture. Le résultat vient du registre, pas de ce site.</p>
+          <button class="enbauges-btn-primary" @click="verify" :disabled="reg.verifying">{{ reg.verifying ? 'Vérification…' : 'Tout revérifier depuis le premier bloc' }}</button>
+          <div v-if="reg.verdict" style="margin-top:1rem" :class="reg.verdict.ok ? 'verify-ok' : 'verify-bad'">{{ reg.verdict.text }}</div>
+          <p class="mat-note" style="margin-top:1rem">Pour vérifier sans dépendre de ce site non plus : installez <code>greffe</code> sur votre propre machine, rejoignez la fédération <code>coeur-des-bauges</code> comme nœud et lancez <code>greffe verify</code>.</p>
+        </div>
+      </section>
+
       <!-- ===== admin (moderation) ===== -->
       <section v-if="admin.token" class="mat-admin">
         <div style="display:flex;justify-content:space-between;align-items:center"><strong>Modération</strong><span><button class="mat-btn-sm" @click="loadPending">↻ Actualiser</button> <button class="mat-btn-sm" @click="admin.token=''; localStorage.removeItem('mat_admin')">Quitter</button></span></div>
@@ -148,8 +221,13 @@ const ICONS = {bois:'🪵',metal:'🔩',isolation:'🧶',menuiserie:'🚪',plomb
 Vue.createApp({
   data(){ return { view:'list', loading:true, items:[], meta:{categories:[],communes:[],modes:[],statuses:[],register:''}, filter:{category:'',commune:'',mode:'',showGone:false},
     form:{title:'',description:'',category:'',commune:'',mode:'don',quantity:'',contact:'',photo_url:'',nickname:'',website:''}, sending:false, error:'',
-    toast:{show:false,message:'',type:'info'}, admin:{token:'',pending:[]} } },
-  computed:{ shown(){ return this.items.filter(i => (this.filter.showGone || i.status !== 'parti') && (!this.filter.category || i.category===this.filter.category) && (!this.filter.commune || i.commune===this.filter.commune) && (!this.filter.mode || i.mode===this.filter.mode)); } },
+    toast:{show:false,message:'',type:'info'}, admin:{token:'',pending:[]}, reg:{tab:'objets',loading:false,error:'',entries:[],focus:'',commune:'',month:'',verifying:false,verdict:null} } },
+  computed:{
+    regBase(){ return (this.meta.register||'').replace(/\/ui\/?$/,'') },
+    objects(){ const by={}; for(const e of this.reg.entries){ let p={}; try{p=JSON.parse(e.payload)}catch(_){} const id=(p.id||'').split(' ')[0]; if(!id) continue; if(!by[id]) by[id]={id, title:p.title||'(sans titre)', category:'', commune:'', events:[]}; if(p.category) by[id].category=p.category; if(p.commune) by[id].commune=p.commune; if(p.title) by[id].title=p.title; by[id].events.push(this.describe(e,p)); } return Object.values(by).sort((a,b)=>b.events[0].height-a.events[0].height) },
+    journal(){ return this.reg.entries.map(e=>{ let p={}; try{p=JSON.parse(e.payload)}catch(_){} const d=this.describe(e,p); return Object.assign(d,{title:p.title||'', commune:p.commune||this.communeOf(p.id), by:p.by||''}) }).filter(e=>(!this.reg.commune||e.commune===this.reg.commune)&&(!this.reg.month||e.month===this.reg.month)).reverse() },
+    months(){ return [...new Set(this.reg.entries.map(e=>this.monthOf(e.ts)))] },
+    shown(){ return this.items.filter(i => (this.filter.showGone || i.status !== 'parti') && (!this.filter.category || i.category===this.filter.category) && (!this.filter.commune || i.commune===this.filter.commune) && (!this.filter.mode || i.mode===this.filter.mode)); } },
   methods:{
     label(c){ return LABELS[c] || c }, icon(c){ return ICONS[c] || '📦' },
     badge(it){ return it.status==='disponible' ? (it.mode==='don' ? 'Don' : 'Prêt') : (it.status==='prete' ? 'Prêté' : 'Parti') },
@@ -160,11 +238,17 @@ Vue.createApp({
       try { const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'propose',item:this.form,website:this.form.website})}); const d=await r.json();
         if(!d.ok){ this.error=d.error||'Erreur'; } else { this.say('Merci ! Votre annonce sera publiée après relecture.','success'); this.form={title:'',description:'',category:'',commune:'',mode:'don',quantity:'',contact:'',photo_url:'',nickname:'',website:''}; this.view='list'; }
       } catch(e){ this.error='Réseau indisponible' } this.sending=false },
+    monthOf(ts){ const d=new Date(ts*1000); return d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}) },
+    communeOf(id){ const o=this.objects.find(o=>o.id===(id||'').split(' ')[0]); return o?o.commune:'' },
+    describe(e,p){ const k=e.kind.replace('materiautheque.',''); const by=p.by?` par ${p.by}`:''; const m={ 'item.add':['Publié'+by,'add'], 'item.lent':['Prêté','lent'], 'item.available':['À nouveau disponible','add'], 'item.gone':['Parti (donné ou repris)','gone'], 'item.removed':['Retiré de la matériauthèque'+(p.reason?` — ${p.reason}`:''),'gone'], 'item.correct':['Correction'+(p.by?` : annonceur « ${p.by} »`:'')+(p.note?` (${p.note})`:''),'correct'] }; const [text,cls]=m[k]||[k,'']; return { id:e.id, height:e.height, ts:e.ts, when:new Date(e.ts*1000).toLocaleString('fr-FR',{dateStyle:'long',timeStyle:'short'}), month:this.monthOf(e.ts), text, cls } },
+    async loadRegister(){ if(!this.regBase) return; this.reg.loading=true; this.reg.error=''; try{ const r=await fetch(this.regBase+'/entries?kind=materiautheque.*&limit=1000'); this.reg.entries=await r.json(); }catch(e){ this.reg.error='Le registre est injoignable pour le moment ('+e.message+'). Le catalogue, lui, fonctionne.' } this.reg.loading=false },
+    openHistory(id){ this.view='registre'; this.reg.tab='objets'; this.reg.focus=id; this.loadRegister(); },
+    async verify(){ this.reg.verifying=true; this.reg.verdict=null; try{ const [v,st]=await Promise.all([fetch(this.regBase+'/verify').then(r=>r.json()), fetch(this.regBase+'/status').then(r=>r.json())]); const n=this.reg.entries.length; this.reg.verdict = v.ok ? {ok:true,text:`✔ Registre intact : ${v.height+1} blocs et ${n} inscription${n>1?'s':''} de la matériauthèque, toutes les empreintes et signatures vérifiées à l'instant par le nœud « ${st.name} » (hauteur ${st.height}).`} : {ok:false,text:'✘ Le registre signale un problème : '+v.error} }catch(e){ this.reg.verdict={ok:false,text:'Vérification impossible : '+e.message} } this.reg.verifying=false },
     async loadPending(){ try { const r=await fetch(API+'?view=pending',{headers:{'X-Admin-Token':this.admin.token}}); if(r.status===401){ this.say('Jeton de modération refusé','error'); this.admin.token=''; localStorage.removeItem('mat_admin'); return } const d=await r.json(); this.admin.pending=d.items||[] } catch(e){} },
     async editItem(it){ const title=prompt('Titre', it.title); if(title===null) return; const nickname=prompt('Prénom ou surnom (vide = aucun)', it.nickname||''); if(nickname===null) return; const mode=prompt('don ou pret', it.mode); if(mode===null) return; await this.moderate('edit', it.id, {fields:{title, nickname, mode}}); },
     async moderate(action,id,extra){ try { const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Token':this.admin.token},body:JSON.stringify(Object.assign({action,id},extra||{}))}); const d=await r.json(); this.say(d.ok ? 'Fait' + (d.register && d.register.id ? ' — inscrit au registre' : '') : (d.error||'Erreur'), d.ok?'success':'error'); await this.load(); await this.loadPending(); } catch(e){ this.say('Erreur réseau','error') } }
   },
-  async mounted(){ const h=new URLSearchParams(location.hash.slice(1)); if(h.get('admin')){ localStorage.setItem('mat_admin',h.get('admin')); history.replaceState(null,'',location.pathname) } this.admin.token=localStorage.getItem('mat_admin')||''; await this.load(); if(this.admin.token) this.loadPending(); }
+  async mounted(){ const h=new URLSearchParams(location.hash.slice(1)); if(h.get('admin')){ localStorage.setItem('mat_admin',h.get('admin')); history.replaceState(null,'',location.pathname) } this.admin.token=localStorage.getItem('mat_admin')||''; await this.load(); if(this.admin.token) this.loadPending(); if(location.hash==='#registre'){ this.view='registre'; this.loadRegister(); } }
 }).mount('#app');
 </script>
 </body>
