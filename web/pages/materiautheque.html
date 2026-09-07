@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matériauthèque — La Commune des Bauges</title>
+  <meta name="description" content="La matériauthèque du Cœur des Bauges : matériaux, outils et objets que les habitants donnent ou prêtent, entre voisins, sans compte.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css">
+  <link href="/css/enbauges.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js"></script>
+  <style>
+    .mat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
+    .mat-card{background:#fff;border:1px solid var(--enbauges-stone-light);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+    .mat-card__img{aspect-ratio:4/3;background:var(--enbauges-cream);display:flex;align-items:center;justify-content:center;font-size:2.5rem;overflow:hidden}
+    .mat-card__img img{width:100%;height:100%;object-fit:cover}
+    .mat-card__body{padding:.9rem 1rem;display:flex;flex-direction:column;gap:.4rem;flex:1}
+    .mat-card__title{font-weight:600;color:var(--enbauges-earth)}
+    .mat-card__meta{font-size:.82rem;color:var(--enbauges-stone)}
+    .mat-badge{display:inline-block;padding:.1rem .55rem;border-radius:999px;font-size:.75rem;font-weight:600}
+    .mat-badge--don{background:#E8F1EA;color:var(--enbauges-sage-dark)}
+    .mat-badge--pret{background:#FBEEDD;color:var(--enbauges-terracotta)}
+    .mat-badge--prete{background:#EEE;color:var(--enbauges-stone)}
+    .mat-badge--parti{background:#F3E3DF;color:#8A3A2B}
+    .mat-contact{margin-top:auto;padding-top:.5rem;border-top:1px dashed var(--enbauges-stone-light);font-size:.9rem}
+    .mat-filters{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:1rem 0 1.5rem}
+    .mat-filters select,.mat-form select,.mat-form input,.mat-form textarea{padding:.5rem .7rem;border:1px solid var(--enbauges-stone-light);border-radius:8px;font:inherit;background:#fff;width:100%}
+    .mat-filters select{width:auto}
+    .mat-form{display:grid;gap:.7rem;max-width:620px}
+    .mat-form label{font-size:.85rem;font-weight:600;color:var(--enbauges-brown)}
+    .mat-form .row{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+    .mat-note{font-size:.85rem;color:var(--enbauges-stone)}
+    .mat-register{background:var(--enbauges-cream);border-radius:12px;padding:1rem 1.2rem;font-size:.9rem;margin-top:2rem}
+    .mat-admin{border:1px dashed var(--enbauges-amber);border-radius:12px;padding:1rem 1.2rem;margin-top:2rem;background:#FFFBF2}
+    .mat-admin table{width:100%;font-size:.88rem}.mat-admin td{padding:.35rem .4rem;vertical-align:top;border-top:1px solid #eee}
+    .mat-btn-sm{padding:.25rem .6rem;border-radius:6px;border:1px solid var(--enbauges-stone-light);background:#fff;font:inherit;font-size:.8rem;cursor:pointer}
+    .hp{position:absolute;left:-9999px;top:-9999px}
+  </style>
+<script defer src="https://vigie.intrane.fr/vigie.js"></script>
+</head>
+<body>
+<div id="app">
+  <div v-if="toast.show" class="enbauges-toast" :class="'enbauges-toast--' + toast.type">{{ toast.message }}</div>
+  <nav class="enbauges-navbar">
+    <div class="enbauges-container">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 0;">
+        <a href="/" class="enbauges-brand" style="text-decoration:none">
+          <svg class="enbauges-brand__logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="14" fill="#7A9E7E"/><path d="M16 8C12 8 8 12 8 16C8 20 12 24 16 24C20 24 24 20 24 16" stroke="#FAF7F2" stroke-width="2" stroke-linecap="round"/><path d="M16 8C20 8 24 12 24 16C24 20 20 24 16 24" stroke="#D4A03C" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="16" r="3" fill="#FAF7F2"/></svg>
+          <span style="font-weight:700;font-size:1.125rem;color:var(--enbauges-earth)">La Commune des Bauges</span>
+        </a>
+        <div style="display:flex;gap:.75rem">
+          <button class="enbauges-btn-primary" @click="view = view === 'propose' ? 'list' : 'propose'">{{ view === 'propose' ? '← Voir les annonces' : '➕ Proposer un matériau' }}</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="enbauges-main">
+    <div class="enbauges-container" style="padding-top:2rem;padding-bottom:3rem">
+      <h1 class="enbauges-section-title">🧱 Matériauthèque</h1>
+      <p class="enbauges-section-subtitle">Matériaux, outils et objets que les habitants du Cœur des Bauges donnent ou prêtent, entre voisins. Sans compte : une annonce, c'est un titre, une description et un moyen de vous joindre.</p>
+
+      <!-- ===== list ===== -->
+      <section v-if="view === 'list'">
+        <div class="mat-filters">
+          <select v-model="filter.category"><option value="">Toutes catégories</option><option v-for="c in meta.categories" :value="c">{{ label(c) }}</option></select>
+          <select v-model="filter.commune"><option value="">Toutes communes</option><option v-for="c in meta.communes" :value="c">{{ c }}</option></select>
+          <select v-model="filter.mode"><option value="">Don et prêt</option><option value="don">Don</option><option value="pret">Prêt</option></select>
+          <label style="font-size:.85rem"><input type="checkbox" v-model="filter.showGone"> afficher les objets partis</label>
+          <span class="mat-note" style="margin-left:auto">{{ shown.length }} annonce{{ shown.length > 1 ? 's' : '' }}</span>
+        </div>
+        <div v-if="loading" class="enbauges-empty-state"><div class="enbauges-empty-state__text">Chargement…</div></div>
+        <div v-else-if="shown.length === 0" class="enbauges-empty-state">
+          <div class="enbauges-empty-state__icon">🧱</div>
+          <div class="enbauges-empty-state__title">Rien pour l'instant</div>
+          <div class="enbauges-empty-state__text">Vous avez des tuiles, des planches, une perceuse qui dort ? Proposez-les.</div>
+        </div>
+        <div v-else class="mat-grid">
+          <article v-for="it in shown" :key="it.id" class="mat-card">
+            <div class="mat-card__img"><img v-if="it.photo_url" :src="it.photo_url" :alt="it.title" loading="lazy"><span v-else>{{ icon(it.category) }}</span></div>
+            <div class="mat-card__body">
+              <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start">
+                <div class="mat-card__title">{{ it.title }}</div>
+                <span class="mat-badge" :class="'mat-badge--' + (it.status === 'disponible' ? it.mode : it.status)">{{ badge(it) }}</span>
+              </div>
+              <div class="mat-card__meta">{{ label(it.category) }} · {{ it.commune }}<span v-if="it.quantity"> · {{ it.quantity }}</span></div>
+              <div style="font-size:.9rem;white-space:pre-line">{{ it.description }}</div>
+              <div class="mat-contact"><strong>Contact :</strong> {{ it.contact }}</div>
+              <div class="mat-card__meta">Publié le {{ date(it.approved_at) }}<a v-if="it.register_id && meta.register" :href="meta.register + '#/entry/' + it.register_id" target="_blank" rel="noopener" style="margin-left:.4rem" title="Voir dans le registre public">⛓ registre</a></div>
+            </div>
+          </article>
+        </div>
+        <div class="mat-register" v-if="meta.register">
+          <strong>Un registre public, que personne ne peut réécrire.</strong> Chaque objet publié, prêté ou parti est inscrit dans le registre du Cœur des Bauges — une chaîne signée, consultable par tous, sans passer par ce site.
+          <a :href="meta.register" target="_blank" rel="noopener" class="enbauges-link">Consulter le registre →</a>
+        </div>
+      </section>
+
+      <!-- ===== propose ===== -->
+      <section v-if="view === 'propose'">
+        <h2 class="enbauges-section-title" style="font-size:1.25rem">Proposer un matériau, un outil, un objet</h2>
+        <p class="mat-note">Votre annonce sera relue par un habitant bénévole avant publication (en général sous 48 h). Le moyen de contact que vous indiquez sera affiché publiquement : choisissez ce que vous acceptez de montrer (téléphone, e-mail, « à la mairie de … »).</p>
+        <form class="mat-form" @submit.prevent="submit" style="margin-top:1rem">
+          <div><label>Titre *</label><input v-model.trim="form.title" maxlength="80" placeholder="Ex : Tuiles terre cuite, ~200" required></div>
+          <div><label>Description</label><textarea v-model.trim="form.description" rows="4" maxlength="1000" placeholder="État, dimensions, où récupérer…"></textarea></div>
+          <div class="row">
+            <div><label>Catégorie *</label><select v-model="form.category" required><option value="" disabled>Choisir</option><option v-for="c in meta.categories" :value="c">{{ label(c) }}</option></select></div>
+            <div><label>Commune *</label><select v-model="form.commune" required><option value="" disabled>Choisir</option><option v-for="c in meta.communes" :value="c">{{ c }}</option></select></div>
+          </div>
+          <div class="row">
+            <div><label>Don ou prêt *</label><select v-model="form.mode" required><option value="don">Don</option><option value="pret">Prêt</option></select></div>
+            <div><label>Quantité</label><input v-model.trim="form.quantity" maxlength="40" placeholder="Ex : 3 planches de 2 m"></div>
+          </div>
+          <div><label>Contact (affiché publiquement) *</label><input v-model.trim="form.contact" maxlength="120" placeholder="06 …, prenom@…, ou « à la mairie du Châtelard »" required></div>
+          <div><label>Photo (lien, optionnel)</label><input v-model.trim="form.photo_url" maxlength="500" placeholder="https://…"></div>
+          <input class="hp" type="text" name="website" v-model="form.website" tabindex="-1" autocomplete="off">
+          <div style="display:flex;gap:.75rem;align-items:center"><button class="enbauges-btn-primary" :disabled="sending">{{ sending ? 'Envoi…' : 'Envoyer' }}</button><span class="mat-note" v-if="error" style="color:#8A3A2B">{{ error }}</span></div>
+        </form>
+      </section>
+
+      <!-- ===== admin (moderation) ===== -->
+      <section v-if="admin.token" class="mat-admin">
+        <div style="display:flex;justify-content:space-between;align-items:center"><strong>Modération</strong><span><button class="mat-btn-sm" @click="loadPending">↻ Actualiser</button> <button class="mat-btn-sm" @click="admin.token=''; localStorage.removeItem('mat_admin')">Quitter</button></span></div>
+        <p class="mat-note" v-if="admin.pending.length === 0">Aucune proposition en attente.</p>
+        <table v-else><tr v-for="p in admin.pending" :key="p.id"><td><strong>{{ p.title }}</strong><br><span class="mat-note">{{ label(p.category) }} · {{ p.commune }} · {{ p.mode }} · {{ p.contact }}</span><br><span style="white-space:pre-line">{{ p.description }}</span></td><td style="white-space:nowrap"><button class="mat-btn-sm" @click="moderate('approve', p.id)">✔ Publier</button> <button class="mat-btn-sm" @click="moderate('reject', p.id)">✘ Refuser</button></td></tr></table>
+        <p class="mat-note" style="margin-top:.8rem">Objets publiés : changer le statut</p>
+        <table><tr v-for="it in items" :key="it.id"><td>{{ it.title }} <span class="mat-note">({{ it.status }})</span></td><td style="white-space:nowrap"><button class="mat-btn-sm" v-for="s in meta.statuses" :key="s" :disabled="it.status===s" @click="moderate('status', it.id, {status: s})">{{ s }}</button> <button class="mat-btn-sm" @click="moderate('remove', it.id)">supprimer</button></td></tr></table>
+      </section>
+    </div>
+  </main>
+
+  <footer class="enbauges-footer">
+    <div class="enbauges-container">
+      <div class="enbauges-footer__links"><a href="/" class="enbauges-footer__link">Accueil</a><span class="enbauges-footer__divider">·</span><a href="/agenda" class="enbauges-footer__link">Agenda</a><span class="enbauges-footer__divider">·</span><a href="https://github.com/javimosch/materiautheque" class="enbauges-footer__link">Code source</a><span class="enbauges-footer__divider">·</span><a href="/privacy" class="enbauges-footer__link">Confidentialité</a></div>
+    </div>
+  </footer>
+</div>
+<script>
+const API = (document.querySelector('meta[name="mat-api"]') || {}).content || 'https://bkn.vps1.intrane.fr/v1/hooks/materiautheque';
+const LABELS = {bois:'Bois',metal:'Métal',isolation:'Isolation',menuiserie:'Menuiserie',plomberie:'Plomberie',electricite:'Électricité',carrelage:'Carrelage',peinture:'Peinture',outillage:'Outillage',mobilier:'Mobilier',jardin:'Jardin',autre:'Autre'};
+const ICONS = {bois:'🪵',metal:'🔩',isolation:'🧶',menuiserie:'🚪',plomberie:'🚰',electricite:'💡',carrelage:'🧱',peinture:'🎨',outillage:'🔧',mobilier:'🪑',jardin:'🌱',autre:'📦'};
+Vue.createApp({
+  data(){ return { view:'list', loading:true, items:[], meta:{categories:[],communes:[],modes:[],statuses:[],register:''}, filter:{category:'',commune:'',mode:'',showGone:false},
+    form:{title:'',description:'',category:'',commune:'',mode:'don',quantity:'',contact:'',photo_url:'',website:''}, sending:false, error:'',
+    toast:{show:false,message:'',type:'info'}, admin:{token:'',pending:[]} } },
+  computed:{ shown(){ return this.items.filter(i => (this.filter.showGone || i.status !== 'parti') && (!this.filter.category || i.category===this.filter.category) && (!this.filter.commune || i.commune===this.filter.commune) && (!this.filter.mode || i.mode===this.filter.mode)); } },
+  methods:{
+    label(c){ return LABELS[c] || c }, icon(c){ return ICONS[c] || '📦' },
+    badge(it){ return it.status==='disponible' ? (it.mode==='don' ? 'Don' : 'Prêt') : (it.status==='prete' ? 'Prêté' : 'Parti') },
+    date(s){ try { return new Date(s).toLocaleDateString('fr-FR') } catch(e){ return '' } },
+    say(m,t){ this.toast={show:true,message:m,type:t||'info'}; setTimeout(()=>this.toast.show=false, 4000) },
+    async load(){ this.loading=true; try { const [m,l]=await Promise.all([fetch(API+'?view=meta').then(r=>r.json()), fetch(API).then(r=>r.json())]); this.meta=m; this.items=l.items||[]; } catch(e){ this.say('Impossible de charger les annonces','error') } this.loading=false },
+    async submit(){ this.sending=true; this.error='';
+      try { const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'propose',item:this.form,website:this.form.website})}); const d=await r.json();
+        if(!d.ok){ this.error=d.error||'Erreur'; } else { this.say('Merci ! Votre annonce sera publiée après relecture.','success'); this.form={title:'',description:'',category:'',commune:'',mode:'don',quantity:'',contact:'',photo_url:'',website:''}; this.view='list'; }
+      } catch(e){ this.error='Réseau indisponible' } this.sending=false },
+    async loadPending(){ try { const r=await fetch(API+'?view=pending',{headers:{'X-Admin-Token':this.admin.token}}); if(r.status===401){ this.say('Jeton de modération refusé','error'); this.admin.token=''; localStorage.removeItem('mat_admin'); return } const d=await r.json(); this.admin.pending=d.items||[] } catch(e){} },
+    async moderate(action,id,extra){ try { const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Token':this.admin.token},body:JSON.stringify(Object.assign({action,id},extra||{}))}); const d=await r.json(); this.say(d.ok ? 'Fait' + (d.register && d.register.id ? ' — inscrit au registre' : '') : (d.error||'Erreur'), d.ok?'success':'error'); await this.load(); await this.loadPending(); } catch(e){ this.say('Erreur réseau','error') } }
+  },
+  async mounted(){ const h=new URLSearchParams(location.hash.slice(1)); if(h.get('admin')){ localStorage.setItem('mat_admin',h.get('admin')); history.replaceState(null,'',location.pathname) } this.admin.token=localStorage.getItem('mat_admin')||''; await this.load(); if(this.admin.token) this.loadPending(); }
+}).mount('#app');
+</script>
+</body>
+</html>

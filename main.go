@@ -113,6 +113,7 @@ func main() {
 	// Pages
 	mux.HandleFunc("GET /{$}", servePage("canvas.html"))
 	mux.HandleFunc("GET /canvas", servePage("canvas.html"))
+	mountDropInPages(mux)
 	mux.HandleFunc("GET /agenda", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/calendrier", http.StatusMovedPermanently)
 	})

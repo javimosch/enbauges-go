@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"hash/crc32"
 	"html/template"
+	"io/fs"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -194,5 +196,25 @@ func handleAnnuairePage(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Println("annuaire template:", err)
+	}
+}
+
+// mountDropInPages serves every web/pages/<name>.html at /<name>. It is the opt-in
+// mechanism for mini-apps that live in their own repository and only need a page on
+// this domain (e.g. the matériauthèque): drop the file in web/pages/ (embedded or via
+// the disk overlay) and it is routed; nothing else in the binary knows about it.
+func mountDropInPages(mux *http.ServeMux) {
+	entries, err := fs.ReadDir(webOverlay, "pages")
+	if err != nil {
+		return
+	}
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".html") {
+			continue
+		}
+		route := "/" + strings.TrimSuffix(name, ".html")
+		mux.HandleFunc("GET "+route, servePage("pages/"+name))
+		log.Printf("drop-in page %s -> %s", name, route)
 	}
 }
