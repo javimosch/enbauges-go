@@ -145,7 +145,7 @@
       <!-- ===== registre ===== -->
       <section v-if="view === 'registre'">
         <h2 class="enbauges-section-title" style="font-size:1.25rem">⛓ Le registre public de la matériauthèque</h2>
-        <p class="mat-note">Ce que la matériauthèque enregistre est inscrit dans un registre partagé — une chaîne de blocs signés, copiée sur deux machines, que ce site lui-même ne peut pas réécrire. Cette page lit le registre directement, sans passer par le serveur d'enbauges.</p>
+        <p class="mat-note">Ce que la matériauthèque enregistre est inscrit dans un registre partagé — une chaîne de blocs signés par deux validateurs sur deux machines, où chaque nœud refuse toute réécriture du passé. Cette page lit le registre directement.</p>
         <div class="reg-tabs">
           <button class="reg-tab" :class="{'reg-tab--on': reg.tab==='objets'}" @click="reg.tab='objets'">Par objet</button>
           <button class="reg-tab" :class="{'reg-tab--on': reg.tab==='journal'}" @click="reg.tab='journal'">Journal du territoire</button>
@@ -184,7 +184,7 @@
           <div class="reg-box"><h3>Ce qui n'y va jamais</h3>
             <dl class="reg-kv"><dt class="reg-no">✘</dt><dd>le téléphone, l'e-mail ou tout moyen de contact</dd><dt class="reg-no">✘</dt><dd>la description et la photo</dd><dt class="reg-no">✘</dt><dd>les propositions refusées ou en attente</dd><dt class="reg-no">✘</dt><dd>qui a consulté quoi — le registre ne trace pas les lecteurs</dd></dl></div>
           <div class="reg-box"><h3>Où et comment</h3>
-            <p style="font-size:.9rem;margin:0">Le registre est une chaîne de blocs : chaque inscription est signée, chaque bloc contient l'empreinte du précédent. Une copie vit sur le serveur d'enbauges.fr (qui signe les inscriptions) et une autre sur une machine indépendante. Modifier une ligne après coup casserait la chaîne sur toutes les copies : c'est ce qui rend l'historique fiable sans avoir à faire confiance au site.</p></div>
+            <p style="font-size:.9rem;margin:0">Le registre est une chaîne de blocs : chaque inscription est signée, chaque bloc contient l'empreinte du précédent. Deux validateurs, sur deux machines, scellent les blocs à tour de rôle, et chaque nœud refuse un bloc qui réécrirait l'historique déjà établi. Aujourd'hui les deux clés sont détenues par l'équipe d'enbauges.fr ; la garantie devient complète le jour où une association du territoire tient la seconde clé sur sa propre machine — c'est prévu ainsi.</p></div>
           <div class="reg-box"><h3>Se tromper, c'est possible ; effacer, non</h3>
             <p style="font-size:.9rem;margin:0">Une erreur ne se corrige pas en réécrivant le passé mais en ajoutant une inscription « correction » qui pointe vers l'originale. Les deux restent visibles. Le logiciel du registre, <a class="enbauges-link" href="https://github.com/javimosch/greffe" target="_blank" rel="noopener">greffe</a>, est libre ; celui de cette page aussi.</p></div>
         </div>
