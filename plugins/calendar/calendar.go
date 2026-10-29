@@ -136,7 +136,7 @@ func (c *Calendar) list(w http.ResponseWriter, r *http.Request, ctx *plugin.Cont
 	}
 	entries := []Entry{}
 	cur, err := c.col(ctx).Find(dbctx, filter,
-		options.Find().SetSort(bson.D{{Key: "startDate", Value: 1}, {Key: "createdAt", Value: -1}}).SetLimit(200))
+		options.Find().SetSort(bson.D{{Key: "startDate", Value: -1}, {Key: "createdAt", Value: -1}}).SetLimit(500))
 	if err != nil {
 		plugin.WriteErr(w, 500, err.Error())
 		return
