@@ -99,7 +99,17 @@
         </div>
       </div>
 
-      <div id="graph3d" style="flex: 1;"></div>
+      <div v-if="graphNoWebGL" style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+        <div style="max-width: 26rem; text-align: center; color: rgba(250,247,242,0.85);">
+          <div style="font-size: 2rem; margin-bottom: 0.75rem;">🌌</div>
+          <div style="font-weight: 600; margin-bottom: 0.5rem;">La vue 3D nécessite WebGL</div>
+          <div style="font-size: 0.875rem; line-height: 1.5; color: rgba(250,247,242,0.6);">
+            Votre navigateur a bloqué l'accélération graphique. Activez « l'accélération matérielle » dans les paramètres (edge://settings ou chrome://settings), puis rechargez la page.
+          </div>
+          <button @click="showGraphMode = false" class="enbauges-btn-secondary" style="margin-top: 1.25rem;">Retour à la carte</button>
+        </div>
+      </div>
+      <div v-else id="graph3d" style="flex: 1;"></div>
     </div>
 
     <nav class="enbauges-navbar">
@@ -1160,6 +1170,14 @@
         const claimingCard = ref(null);
         const showGraphMode = ref(false);
         const graphLoading = ref(false);
+        const graphNoWebGL = ref(false);
+
+        function webglSupported() {
+          try {
+            const c = document.createElement('canvas');
+            return !!(c.getContext('webgl2') || c.getContext('webgl'));
+          } catch (e) { return false; }
+        }
         const lightboxImage = ref(null);
         const uploadingImage = ref(false);
         const graphFilters = reactive({ actor: true, solution: true, initiative: true });
@@ -1225,6 +1243,7 @@
         }
 
         async function openGraphMode() {
+          graphNoWebGL.value = false;
           showGraphMode.value = true;
           graphLoading.value = true;
           graphSelected.value = null;
@@ -1232,6 +1251,10 @@
           await Vue.nextTick();
           try {
             await fetchGraphData();
+            if (!webglSupported()) {
+              graphNoWebGL.value = true;
+              return;
+            }
             await initGraph3D();
           } catch (err) {
             console.error('Graph init error:', err);
@@ -2191,6 +2214,7 @@
           closeMapPicker,
           showGraphMode,
           graphLoading,
+          graphNoWebGL,
           graphFilters,
           graphSelected,
           graphSelectedDegree,
