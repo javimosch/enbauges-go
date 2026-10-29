@@ -598,7 +598,7 @@
       setup() {
         const entries = ref([]);
         const loading = ref(true);
-        const viewMode = ref('grid');
+        const viewMode = ref('list');
         const filterType = ref('all');
         const currentMonth = ref(dayjs().month() + 1);
         const currentYear = ref(dayjs().year());
@@ -1065,6 +1065,7 @@
           weekDays,
           calendarDays,
           filteredEntries,
+          isPassed,
           showAddModal,
           showDeleteConfirm,
           editingEntry,
