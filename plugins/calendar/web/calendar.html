@@ -172,9 +172,14 @@
             </div>
           </div>
 
-          <div v-else class="enbauges-grid">
+          <div v-else>
+            <details v-for="group in groupedEntries" :key="group.key" :open="group.open" style="margin-bottom: 1rem;">
+              <summary style="cursor: pointer; font-weight: 600; color: var(--enbauges-earth); font-size: 1.0625rem; padding: 0.625rem 0;">
+                {{ group.label }} <span style="font-weight: 400; color: var(--enbauges-brown); font-size: 0.875rem;">({{ group.entries.length }})</span>
+              </summary>
+              <div class="enbauges-grid">
             <div 
-              v-for="entry in filteredEntries" 
+              v-for="entry in group.entries" 
               :key="entry._id"
               class="enbauges-card"
               :class="entry.type === 'event' ? 'enbauges-card--solution' : 'enbauges-card--initiative'"
@@ -244,6 +249,8 @@
                 </div>
               </div>
             </div>
+              </div>
+            </details>
           </div>
         </div>
       </div>
@@ -665,6 +672,39 @@
           return visible.slice().sort((a, b) => dayjs(b.startDate).valueOf() - dayjs(a.startDate).valueOf());
         });
 
+        const FR_MONTHS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+        const monthLabel = (d) => FR_MONTHS[d.month()] + ' ' + d.year();
+
+        // Bucket the list into time accordions: coming months, next month,
+        // this month, previous month, older.
+        const groupedEntries = computed(() => {
+          const now = dayjs();
+          const thisStart = now.startOf('month');
+          const nextStart = thisStart.add(1, 'month');
+          const laterStart = thisStart.add(2, 'month');
+          const prevStart = thisStart.subtract(1, 'month');
+          const groups = [
+            { key: 'later',  label: 'À venir (prochains mois)', open: false, entries: [] },
+            { key: 'next',   label: 'À venir (' + monthLabel(nextStart) + ')', open: true,  entries: [] },
+            { key: 'this',   label: 'Ce mois-ci (' + monthLabel(thisStart) + ')', open: true, entries: [] },
+            { key: 'prev',   label: 'Mois dernier (' + monthLabel(prevStart) + ')', open: false, entries: [] },
+            { key: 'older',  label: 'Plus anciens', open: false, entries: [] },
+          ];
+          for (const e of filteredEntries.value) {
+            const d = dayjs(e.startDate);
+            if (!d.isBefore(laterStart)) groups[0].entries.push(e);
+            else if (!d.isBefore(nextStart)) groups[1].entries.push(e);
+            else if (!d.isBefore(thisStart)) groups[2].entries.push(e);
+            else if (!d.isBefore(prevStart)) groups[3].entries.push(e);
+            else groups[4].entries.push(e);
+          }
+          // Within each group keep soonest-first for upcoming, newest-first
+          // for the past sections.
+          const asc = (a, b) => dayjs(a.startDate).valueOf() - dayjs(b.startDate).valueOf();
+          groups[0].entries.sort(asc); groups[1].entries.sort(asc); groups[2].entries.sort(asc);
+          return groups.filter(g => g.entries.length > 0);
+        });
+
         const calendarDays = computed(() => {
           const firstDay = dayjs().year(currentYear.value).month(currentMonth.value - 1).date(1);
           const startPadding = firstDay.day();
@@ -1066,6 +1106,7 @@
           calendarDays,
           filteredEntries,
           isPassed,
+          groupedEntries,
           showAddModal,
           showDeleteConfirm,
           editingEntry,
