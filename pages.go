@@ -100,6 +100,7 @@ func serveStatic(w http.ResponseWriter, r *http.Request) {
 type agendaEvent struct {
 	Title, Description, Location, Category, OrgName string
 	Day, Weekday, Time                              string
+	Passed                                          bool
 }
 
 type agendaMonth struct {
@@ -110,25 +111,22 @@ type agendaMonth struct {
 func handleAgendaPage(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := reqCtx(r)
 	defer cancel()
+	// Show upcoming events plus anything that ended within the last 30 days
+	// (shown with a "Passé" badge); older events are hidden.
+	now := time.Now()
+	cutoff := now.Add(-30 * 24 * time.Hour)
 	list := []Event{}
 	cur, err := events().Find(ctx,
-		bson.M{"status": "approved", "endAt": bson.M{"$gte": time.Now()}},
-		options.Find().SetSort(bson.D{{Key: "startAt", Value: 1}}).SetLimit(200))
+		bson.M{"status": "approved", "endAt": bson.M{"$gte": cutoff}},
+		options.Find().SetSort(bson.D{{Key: "startAt", Value: 1}}).SetLimit(300))
 	if err == nil {
 		_ = cur.All(ctx, &list)
 	}
 
-	months := []agendaMonth{}
-	var current *agendaMonth
-	for _, e := range list {
+	mkEvent := func(e Event, passed bool) agendaEvent {
 		start := e.StartAt.In(parisTZ)
 		end := e.EndAt.In(parisTZ)
-		label := fmt.Sprintf("%s %d", frMonths[start.Month()-1], start.Year())
-		if current == nil || current.Label != label {
-			months = append(months, agendaMonth{Label: label})
-			current = &months[len(months)-1]
-		}
-		current.Events = append(current.Events, agendaEvent{
+		return agendaEvent{
 			Title:       e.Title,
 			Description: e.Description,
 			Location:    e.Location,
@@ -136,7 +134,40 @@ func handleAgendaPage(w http.ResponseWriter, r *http.Request) {
 			Day:         fmt.Sprintf("%d", start.Day()),
 			Weekday:     frWeekdays[start.Weekday()],
 			Time:        start.Format("15:04") + " – " + end.Format("15:04"),
-		})
+			Passed:      passed,
+		}
+	}
+	monthLabel := func(e Event) string {
+		start := e.StartAt.In(parisTZ)
+		return fmt.Sprintf("%s %d", frMonths[start.Month()-1], start.Year())
+	}
+
+	months := []agendaMonth{}
+	pastMonths := []agendaMonth{}
+	for _, e := range list {
+		passed := e.EndAt.Before(now)
+		target := &months
+		if passed {
+			target = &pastMonths
+		}
+		var current *agendaMonth
+		if len(*target) > 0 {
+			current = &(*target)[len(*target)-1]
+		}
+		if current == nil || current.Label != monthLabel(e) {
+			*target = append(*target, agendaMonth{Label: monthLabel(e)})
+			current = &(*target)[len(*target)-1]
+		}
+		current.Events = append(current.Events, mkEvent(e, passed))
+	}
+	// Past section: most recent first.
+	for i := range pastMonths {
+		for l, r := 0, len(pastMonths[i].Events)-1; l < r; l, r = l+1, r-1 {
+			pastMonths[i].Events[l], pastMonths[i].Events[r] = pastMonths[i].Events[r], pastMonths[i].Events[l]
+		}
+	}
+	for l, r := 0, len(pastMonths)-1; l < r; l, r = l+1, r-1 {
+		pastMonths[l], pastMonths[r] = pastMonths[r], pastMonths[l]
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -146,7 +177,7 @@ func handleAgendaPage(w http.ResponseWriter, r *http.Request) {
 		log.Println("agenda template:", err)
 		return
 	}
-	if err := tmpl.Execute(w, map[string]any{"Months": months}); err != nil {
+	if err := tmpl.Execute(w, map[string]any{"Months": months, "PastMonths": pastMonths}); err != nil {
 		log.Println("agenda template:", err)
 	}
 }

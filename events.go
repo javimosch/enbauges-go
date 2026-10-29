@@ -40,11 +40,14 @@ func handlePublicEvents(w http.ResponseWriter, r *http.Request) {
 			filter["startAt"] = bson.M{"$gte": t}
 		}
 	}
+	// Hide events that ended more than 30 days ago.
+	endFilter := bson.M{"$gte": time.Now().Add(-30 * 24 * time.Hour)}
 	if to := q.Get("to"); to != "" {
 		if t, err := time.Parse(time.RFC3339, to); err == nil {
-			filter["endAt"] = bson.M{"$lte": t}
+			endFilter["$lte"] = t
 		}
 	}
+	filter["endAt"] = endFilter
 	list := []Event{}
 	cur, err := events().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "startAt", Value: -1}}).SetLimit(300))
 	if err != nil {
@@ -117,7 +120,7 @@ func handleProposeEvent(w http.ResponseWriter, r *http.Request) {
 		Location:     strings.TrimSpace(in.Location),
 		Category:     strings.TrimSpace(in.Category),
 		ContactEmail: strings.TrimSpace(in.ContactEmail),
-		Status:       "pending",
+		Status:       "approved",
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
@@ -127,7 +130,7 @@ func handleProposeEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, 201, map[string]any{
 		"_id": ev.ID, "status": ev.Status,
-		"message": "Événement proposé — il sera visible après validation.",
+		"message": "Événement publié — il est visible immédiatement.",
 	})
 }
 
