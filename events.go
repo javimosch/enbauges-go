@@ -46,7 +46,7 @@ func handlePublicEvents(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	list := []Event{}
-	cur, err := events().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "startAt", Value: 1}}).SetLimit(300))
+	cur, err := events().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "startAt", Value: -1}}).SetLimit(300))
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
