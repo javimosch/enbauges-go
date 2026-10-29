@@ -186,6 +186,7 @@
                   <span :class="entry.type === 'event' ? 'enbauges-badge-solution' : 'enbauges-badge-initiative'">
                     {{ entry.type === 'event' ? 'Evenement' : 'Modele' }}
                   </span>
+                  <span v-if="isPassed(entry)" style="font-size: 0.6875rem; font-weight: 600; color: var(--enbauges-brown); border: 1px solid var(--enbauges-cream); border-radius: 999px; padding: 0.1rem 0.5rem; margin-left: 0.375rem;">Passé</span>
                   <button @click.stop="toggleVote(entry)" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem; color: hasVoted(entry) ? 'var(--enbauges-amber)' : 'var(--enbauges-brown);'">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                       <path d="M8 2l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4l2-4z"/>
@@ -644,9 +645,24 @@
           return dayjs().month(currentMonth.value - 1).format('MMMM');
         });
 
+        const isPassed = (entry) => {
+          // Only one-time events with an ended date count as passed; recurring
+          // frequencies and open-ended entries stay current.
+          if (entry.frequency && entry.frequency !== 'one-time') return false;
+          if (!entry.endDate) return false;
+          return dayjs(entry.endDate).isBefore(dayjs());
+        };
+
         const filteredEntries = computed(() => {
-          if (filterType.value === 'all') return entries.value;
-          return entries.value.filter(e => e.type === filterType.value);
+          const cutoff = dayjs().subtract(30, 'day');
+          const visible = entries.value.filter(e => {
+            if (filterType.value !== 'all' && e.type !== filterType.value) return false;
+            // Hide events that ended more than 30 days ago.
+            if (e.endDate && e.frequency === 'one-time' && dayjs(e.endDate).isBefore(cutoff)) return false;
+            return true;
+          });
+          // Newest first.
+          return visible.slice().sort((a, b) => dayjs(b.startDate).valueOf() - dayjs(a.startDate).valueOf());
         });
 
         const calendarDays = computed(() => {
