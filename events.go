@@ -30,26 +30,47 @@ func requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// calEntries is the canonical event store — the calendar plugin's
+// "calendarentries" collection. The older "orgevents" collection is retired.
+func calEntries() *mongo.Collection { return db.Collection("calendarentries") }
+
+type calEntry struct {
+	ID          primitive.ObjectID `bson:"_id"`
+	Title       string             `bson:"title"`
+	Description string             `bson:"description"`
+	StartDate   time.Time          `bson:"startDate"`
+	EndDate     *time.Time         `bson:"endDate"`
+	Location    string             `bson:"location"`
+	Tags        []string           `bson:"tags"`
+	Frequency   string             `bson:"frequency"`
+}
+
 func handlePublicEvents(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := reqCtx(r)
 	defer cancel()
 	q := r.URL.Query()
-	filter := bson.M{"status": "approved"}
+	// calendarentries is the canonical event store (calendar plugin).
+	filter := bson.M{"type": "event"}
 	if from := q.Get("from"); from != "" {
 		if t, err := time.Parse(time.RFC3339, from); err == nil {
-			filter["startAt"] = bson.M{"$gte": t}
+			filter["startDate"] = bson.M{"$gte": t}
 		}
 	}
-	// Hide events that ended more than 30 days ago.
-	endFilter := bson.M{"$gte": time.Now().Add(-30 * 24 * time.Hour)}
+	// Hide one-time events that ended more than 30 days ago; recurring and
+	// open-ended entries stay visible.
+	cutoff := bson.M{"$gte": time.Now().Add(-30 * 24 * time.Hour)}
 	if to := q.Get("to"); to != "" {
 		if t, err := time.Parse(time.RFC3339, to); err == nil {
-			endFilter["$lte"] = t
+			cutoff["$lte"] = t
 		}
 	}
-	filter["endAt"] = endFilter
-	list := []Event{}
-	cur, err := events().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "startAt", Value: -1}}).SetLimit(300))
+	filter["$or"] = bson.A{
+		bson.M{"frequency": bson.M{"$ne": "one-time"}},
+		bson.M{"endDate": nil},
+		bson.M{"endDate": cutoff},
+	}
+	list := []calEntry{}
+	cur, err := calEntries().Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "startDate", Value: -1}}).SetLimit(300))
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -70,7 +91,15 @@ func handlePublicEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]publicEvent, 0, len(list))
 	for _, e := range list {
-		out = append(out, publicEvent{e.ID, e.Title, e.Description, e.StartAt, e.EndAt, e.Location, e.Category})
+		var endAt time.Time
+		if e.EndDate != nil {
+			endAt = *e.EndDate
+		}
+		cat := ""
+		if len(e.Tags) > 0 {
+			cat = e.Tags[0]
+		}
+		out = append(out, publicEvent{e.ID, e.Title, e.Description, e.StartDate, endAt, e.Location, cat})
 	}
 	writeJSON(w, 200, map[string]any{"events": out})
 }
@@ -111,25 +140,28 @@ func handleProposeEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := time.Now().UTC()
-	ev := Event{
-		ID:           primitive.NewObjectID(),
-		Title:        in.Title,
-		Description:  strings.TrimSpace(in.Description),
-		StartAt:      startAt,
-		EndAt:        endAt,
-		Location:     strings.TrimSpace(in.Location),
-		Category:     strings.TrimSpace(in.Category),
-		ContactEmail: strings.TrimSpace(in.ContactEmail),
-		Status:       "approved",
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	ev := bson.M{
+		"_id":          primitive.NewObjectID(),
+		"type":         "event",
+		"title":        in.Title,
+		"description":  strings.TrimSpace(in.Description),
+		"startDate":    startAt,
+		"endDate":      endAt,
+		"frequency":    "one-time",
+		"location":     strings.TrimSpace(in.Location),
+		"contactEmail": strings.TrimSpace(in.ContactEmail),
+		"createdAt":    now,
+		"updatedAt":    now,
 	}
-	if _, err := events().InsertOne(ctx, ev); err != nil {
+	if cat := strings.TrimSpace(in.Category); cat != "" {
+		ev["tags"] = []string{cat}
+	}
+	if _, err := calEntries().InsertOne(ctx, ev); err != nil {
 		writeErr(w, 500, err.Error())
 		return
 	}
 	writeJSON(w, 201, map[string]any{
-		"_id": ev.ID, "status": ev.Status,
+		"_id": ev["_id"], "status": "approved",
 		"message": "Événement publié — il est visible immédiatement.",
 	})
 }

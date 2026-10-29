@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	exportSource  = "enbauges.fr"
-	exportNotice  = "Données collectées depuis des sources publiques (sites de communes, Radio Alto). Accès contrôlé — la redistribution en masse est soumise à autorisation."
+	exportSource = "enbauges.fr"
+	exportNotice = "Données collectées depuis des sources publiques (sites de communes, Radio Alto). Accès contrôlé — la redistribution en masse est soumise à autorisation."
 )
 
 // requireAPIKey checks for a valid API key for bulk data exports.
@@ -258,13 +258,32 @@ func handleExportEventsICS(w http.ResponseWriter, r *http.Request) {
 func approvedEvents(r *http.Request) ([]Event, error) {
 	ctx, cancel := reqCtx(r)
 	defer cancel()
-	list := []Event{}
-	cur, err := events().Find(ctx, bson.M{"status": "approved"},
-		options.Find().SetSort(bson.D{{Key: "startAt", Value: 1}}))
+	rows := []calEntry{}
+	cur, err := calEntries().Find(ctx, bson.M{"type": "event"},
+		options.Find().SetSort(bson.D{{Key: "startDate", Value: 1}}))
 	if err != nil {
 		return nil, err
 	}
-	return list, cur.All(ctx, &list)
+	if err := cur.All(ctx, &rows); err != nil {
+		return nil, err
+	}
+	list := make([]Event, 0, len(rows))
+	for _, e := range rows {
+		var endAt time.Time
+		if e.EndDate != nil {
+			endAt = *e.EndDate
+		}
+		cat := ""
+		if len(e.Tags) > 0 {
+			cat = e.Tags[0]
+		}
+		list = append(list, Event{
+			ID: e.ID, Title: e.Title, Description: e.Description,
+			StartAt: e.StartDate, EndAt: endAt,
+			Location: e.Location, Category: cat, Status: "approved",
+		})
+	}
+	return list, nil
 }
 
 func orNil(s string) any {
