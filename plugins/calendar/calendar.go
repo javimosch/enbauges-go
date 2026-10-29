@@ -281,6 +281,10 @@ func (c *Calendar) create(w http.ResponseWriter, r *http.Request, ctx *plugin.Co
 		}
 	}
 	if _, err := c.col(ctx).InsertOne(dbctx, e); err != nil {
+		if strings.Contains(err.Error(), "E11000") {
+			plugin.WriteErr(w, 409, "duplicate entry (same title and startDate)")
+			return
+		}
 		plugin.WriteErr(w, 500, err.Error())
 		return
 	}
